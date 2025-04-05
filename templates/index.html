@@ -28,7 +28,7 @@
         <router-view></router-view>
     </div>
     <script>
-        const { createApp, ref } = Vue;
+        const { createApp, ref, onMounted } = Vue;
         const { createRouter, createWebHashHistory } = VueRouter;
 
         // 登录组件
@@ -71,6 +71,23 @@
                             }
                         });
                 };
+
+                // 在组件挂载时检查 token
+                onMounted(() => {
+                    const token = localStorage.getItem('token');
+                    if (token) {
+                        fetch('/navigation', {
+                            headers: {
+                                'Authorization': token
+                            }
+                        })
+                          .then(response => {
+                                if (response.ok) {
+                                    router.push('/nav');
+                                }
+                            });
+                    }
+                });
 
                 return {
                     username,
