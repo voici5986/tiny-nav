@@ -28,7 +28,7 @@
         <router-view></router-view>
     </div>
     <script>
-        const { createApp, ref, onMounted } = Vue;
+        const { createApp, ref, onMounted, computed } = Vue;
         const { createRouter, createWebHashHistory } = VueRouter;
 
         // 登录组件
@@ -100,31 +100,32 @@
         // 导航组件
         const Nav = {
             template: `
-                <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-3xl">
-                    <div class="flex justify-between items-center mb-6">
-                        <h1 class="text-3xl font-bold">我的导航</h1>
-                        <button @click="logout"
-                            class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300">退出</button>
-                    </div>
+                <div class="bg-gray-800 text-white p-4 w-full flex justify-between items-center">
+                    <h1 class="text-2xl font-bold">导航</h1>
                     <button @click="openAddDialog"
-                        class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring focus:ring-blue-300 mb-6">新增链接</button>
-                    <ul>
-                        <li v-for="(link, index) in links" :key="index"
-                            class="flex items-center mb-4 border-b border-gray-200 pb-4">
-                            <span class="mr-2">
-                                <img v-if="link.icon.startsWith('http')" :src="link.icon" alt="icon" class="w-5 h-5">
-                                <img v-if="link.icon.startsWith('/cache/')" :src="link.icon" alt="icon" class="w-5 h-5">
-                                <span v-else v-html="link.icon"></span>
-                            </span>
-                            <a :href="link.url" class="text-blue-500 hover:underline">{{ link.name }}</a>
-                            <span class="text-gray-500 ml-2"> ({{ link.category }})</span>
-                            <button @click="openUpdateDialog(index)"
-                                class="bg-yellow-400 text-white px-3 py-1 rounded-md hover:bg-yellow-500 focus:outline-none focus:ring focus:ring-yellow-300 ml-4">修改</button>
-                            <button @click="openDeleteDialog(index)"
-                                class="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300 ml-2">删除</button>
-                        </li>
-                    </ul>
-
+                        class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300">新增链接</button>
+                    <button @click="logout"
+                        class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300">退出</button>
+                </div>
+                <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-5xl mt-8">
+                    <div v-for="(group, category) in groupedLinks" :key="category" class="mb-8">
+                        <h2 class="text-xl font-bold mb-4">{{ category }}</h2>
+                        <div class="flex flex-wrap">
+                            <div v-for="(link, index) in group" :key="index"
+                                class="flex flex-col items-center mb-4 mr-4 w-24">
+                                <span class="mb-2">
+                                    <img v-if="link.icon.startsWith('http')" :src="link.icon" alt="icon" class="w-12 h-12">
+                                    <img v-if="link.icon.startsWith('/cache/')" :src="link.icon" alt="icon" class="w-12 h-12">
+                                    <span v-else v-html="link.icon" class="w-12 h-12 block text-center"></span>
+                                </span>
+                                <a :href="link.url" class="text-blue-500 hover:underline text-center">{{ link.name }}</a>
+                                <button @click="openUpdateDialog(index)"
+                                    class="bg-yellow-400 text-white px-2 py-1 rounded-md hover:bg-yellow-500 focus:outline-none focus:ring focus:ring-yellow-300 mt-2">修改</button>
+                                <button @click="openDeleteDialog(index)"
+                                    class="bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300 mt-2">删除</button>
+                            </div>
+                        </div>
+                    </div>
                     <dialog id="addDialog" class="p-6">
                         <h2 class="text-2xl font-bold mb-4">新增链接</h2>
                         <form @submit.prevent="submitAdd" class="space-y-4">
@@ -146,7 +147,6 @@
                             </div>
                         </form>
                     </dialog>
-
                     <dialog id="updateDialog" class="p-6">
                         <h2 class="text-2xl font-bold mb-4">修改链接</h2>
                         <form @submit.prevent="submitUpdate" class="space-y-4">
@@ -168,7 +168,6 @@
                             </div>
                         </form>
                     </dialog>
-
                     <dialog id="deleteDialog" class="p-6">
                         <p class="text-lg mb-4">确定要删除此链接吗？</p>
                         <div class="flex justify-end space-x-4">
@@ -221,6 +220,16 @@
                         });
                 };
 
+                const groupedLinks = computed(() => {
+                    return links.value.reduce((acc, link) => {
+                        if (!acc[link.category]) {
+                            acc[link.category] = [];
+                        }
+                        acc[link.category].push(link);
+                        return acc;
+                    }, {});
+                });
+
                 const openAddDialog = () => {
                     newLink.value = {
                         name: '',
@@ -266,7 +275,6 @@
                 };
 
                 const submitUpdate = () => {
-                    console.log('submitUpdate triggered', updatedLink.value);
                     fetch(`/navigation/update/${updateIndex.value}`, {
                         method: 'PUT',
                         headers: {
@@ -335,7 +343,6 @@
                             })
                           .then(data => {
                                 if (data.iconUrl) {
-                                    console.log(data.iconUrl);
                                     link.icon = data.iconUrl;
                                 }
                             })
@@ -355,6 +362,7 @@
                 return {
                     newLink,
                     links,
+                    groupedLinks,
                     updatedLink,
                     openAddDialog,
                     closeAddDialog,
