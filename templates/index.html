@@ -96,6 +96,7 @@
                             class="flex items-center mb-4 border-b border-gray-200 pb-4">
                             <span class="mr-2">
                                 <img v-if="link.icon.startsWith('http')" :src="link.icon" alt="icon" class="w-5 h-5">
+                                <img v-if="link.icon.startsWith('/cache/')" :src="link.icon" alt="icon" class="w-5 h-5">
                                 <span v-else v-html="link.icon"></span>
                             </span>
                             <a :href="link.url" class="text-blue-500 hover:underline">{{ link.name }}</a>
@@ -116,6 +117,8 @@
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300">
                             <input v-model="newLink.icon" type="text" placeholder="图标"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300">
+                            <button @click="getWebsiteIcon('newLink')"
+                                class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 focus:outline-none focus:ring focus:ring-green-300" type="button">获取网站图标</button>
                             <input v-model="newLink.category" type="text" placeholder="分类"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300">
                             <div class="flex justify-end space-x-4">
@@ -136,6 +139,8 @@
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300">
                             <input v-model="updatedLink.icon" type="text" placeholder="图标"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300">
+                            <button @click="getWebsiteIcon('updatedLink')"
+                                class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 focus:outline-none focus:ring focus:ring-green-300" type="button">获取网站图标</button>
                             <input v-model="updatedLink.category" type="text" placeholder="分类"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300">
                             <div class="flex justify-end space-x-4">
@@ -182,20 +187,21 @@
                             'Authorization': token.value
                         }
                     })
-                        .then(response => {
+                      .then(response => {
                             if (!response.ok) {
                                 throw new Error('Network response was not ok');
                             }
                             return response.json();
                         })
-                        .then(data => {
+                      .then(data => {
                             if (data.links) {
                                 links.value = data.links;
                             }
-                        }).catch(error => {
+                        })
+                      .catch(error => {
                             alert('获取链接失败，请重新登录');
                             router.push('/');
-                        }) ;
+                        });
                 };
 
                 const openAddDialog = () => {
@@ -243,6 +249,7 @@
                 };
 
                 const submitUpdate = () => {
+                    console.log('submitUpdate triggered', updatedLink.value);
                     fetch(`/navigation/update/${updateIndex.value}`, {
                         method: 'PUT',
                         headers: {
@@ -294,6 +301,33 @@
                     router.push('/');
                 };
 
+                const getWebsiteIcon = (linkType) => {
+                    const link = linkType === 'newLink' ? newLink.value : updatedLink.value;
+                    if (link.url) {
+                        fetch(`/get-icon?url=${encodeURIComponent(link.url)}`, {
+                            headers: {
+                                'Authorization': token.value
+                            }
+                        })
+                          .then(response => {
+                                if (response.ok) {
+                                    return response.json();
+                                } else {
+                                    throw new Error('获取图标失败');
+                                }
+                            })
+                          .then(data => {
+                                if (data.iconUrl) {
+                                    console.log(data.iconUrl);
+                                    link.icon = data.iconUrl;
+                                }
+                            })
+                          .catch(error => {
+                                alert(error.message);
+                            });
+                    }
+                };
+
                 if (!token.value) {
                     alert('请先登录');
                     router.push('/');
@@ -314,7 +348,8 @@
                     openDeleteDialog,
                     closeDeleteDialog,
                     submitDelete,
-                    logout
+                    logout,
+                    getWebsiteIcon
                 };
             }
         };

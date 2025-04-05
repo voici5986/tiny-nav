@@ -9,7 +9,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -317,6 +319,72 @@ func debugTokensHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// 获取网站图标的接口
+func getIconHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	token := r.Header.Get("Authorization")
+	if !tokenStore.ValidateToken(token) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	urlParam := r.URL.Query().Get("url")
+	if urlParam == "" {
+		http.Error(w, "Missing URL parameter", http.StatusBadRequest)
+		return
+	}
+
+	parsedURL, err := url.Parse(urlParam)
+	if err != nil {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	iconURL := fmt.Sprintf("%s://%s/favicon.ico", parsedURL.Scheme, parsedURL.Host)
+	resp, err := http.Get(iconURL)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		http.Error(w, "Failed to fetch icon", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// 创建 cache 目录
+	if _, err := os.Stat("cache"); os.IsNotExist(err) {
+		err := os.Mkdir("cache", 0755)
+		if err != nil {
+			http.Error(w, "Failed to create cache directory", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// 生成唯一的文件名
+	fileName := fmt.Sprintf("%s.ico", base64.URLEncoding.EncodeToString([]byte(parsedURL.Host)))
+	filePath := filepath.Join("cache", fileName)
+
+	// 保存图标到 cache 目录
+	file, err := os.Create(filePath)
+	if err != nil {
+		http.Error(w, "Failed to create file", http.StatusInternalServerError)
+		return
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, resp.Body)
+	if err != nil {
+		http.Error(w, "Failed to save icon", http.StatusInternalServerError)
+		return
+	}
+
+	// 返回图标 URL
+	iconResponse := map[string]string{
+		"iconUrl": fmt.Sprintf("/cache/%s", fileName),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(iconResponse)
+}
+
 func main() {
 	port := os.Getenv("LISTEN_PORT")
 	if port == "" {
@@ -331,6 +399,8 @@ func main() {
 	mux.HandleFunc("/navigation/delete/", authMiddleware(deleteLinkHandler))
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/debug/tokens", debugTokensHandler)
+	mux.HandleFunc("/get-icon", authMiddleware(getIconHandler))
+	mux.Handle("/cache/", http.StripPrefix("/cache/", http.FileServer(http.Dir("cache"))))
 
 	// 使用日志中间件包装 mux
 	logHandler := logAccessMiddleware(mux)
