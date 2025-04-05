@@ -6,12 +6,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/net/html"
 	"io"
 	"log"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -319,7 +322,6 @@ func debugTokensHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// 获取网站图标的接口
 func getIconHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -344,9 +346,25 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 
 	iconURL := fmt.Sprintf("%s://%s/favicon.ico", parsedURL.Scheme, parsedURL.Host)
 	resp, err := http.Get(iconURL)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		http.Error(w, "Failed to fetch icon", http.StatusInternalServerError)
-		return
+	log.Printf("Fetching icon from URL:%s code:%d Content-Type:%s", iconURL, resp.StatusCode, resp.Header.Get("Content-Type"))
+	if err != nil || resp.StatusCode != http.StatusOK ||
+		resp.Header.Get("Content-Type") != "image/x-icon" ||
+		resp.Header.Get("Content-Type") != "image/vnd.microsoft.icon" {
+
+		// 尝试解析 HTML 来获取图标
+		iconURL, err = fetchIconFromHTML(urlParam)
+		if err != nil {
+			log.Printf("Failed to fetch icon: %v", err)
+			http.Error(w, "Failed to fetch icon", http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Fetching icon from html URL:%s", iconURL)
+		resp, err = http.Get(iconURL)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			log.Printf("Failed to fetch icon from HTML: %v", err)
+			http.Error(w, "Failed to fetch icon", http.StatusInternalServerError)
+			return
+		}
 	}
 	defer resp.Body.Close()
 
@@ -354,18 +372,21 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err := os.Stat("cache"); os.IsNotExist(err) {
 		err := os.Mkdir("cache", 0755)
 		if err != nil {
+			log.Printf("Failed to create cache directory: %v", err)
 			http.Error(w, "Failed to create cache directory", http.StatusInternalServerError)
 			return
 		}
 	}
 
+	ext := getFileExtension(iconURL, resp)
 	// 生成唯一的文件名
-	fileName := fmt.Sprintf("%s.ico", base64.URLEncoding.EncodeToString([]byte(parsedURL.Host)))
+	fileName := fmt.Sprintf("%s%s", base64.URLEncoding.EncodeToString([]byte(parsedURL.Host)), ext)
 	filePath := filepath.Join("cache", fileName)
 
 	// 保存图标到 cache 目录
 	file, err := os.Create(filePath)
 	if err != nil {
+		log.Printf("Failed to create file: %v", err)
 		http.Error(w, "Failed to create file", http.StatusInternalServerError)
 		return
 	}
@@ -373,6 +394,7 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
+		log.Printf("Failed to save icon: %v", err)
 		http.Error(w, "Failed to save icon", http.StatusInternalServerError)
 		return
 	}
@@ -383,6 +405,78 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(iconResponse)
+}
+
+func fetchIconFromHTML(pageURL string) (string, error) {
+	resp, err := http.Get(pageURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to fetch page, status code: %d", resp.StatusCode)
+	}
+
+	doc, err := html.Parse(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var iconURL string
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "link" {
+			for _, attr := range n.Attr {
+				if attr.Key == "rel" && (attr.Val == "icon" || attr.Val == "shortcut icon") {
+					for _, attr := range n.Attr {
+						if attr.Key == "href" {
+							iconURL = attr.Val
+							log.Printf("Icon URL found: %s", iconURL)
+							if !strings.HasPrefix(iconURL, "http") && !strings.HasPrefix(iconURL, "//") {
+								baseURL, _ := url.Parse(pageURL)
+								iconURL = baseURL.ResolveReference(&url.URL{Path: iconURL}).String()
+							}
+							if strings.HasPrefix(iconURL, "//") {
+								baseURL, _ := url.Parse(pageURL)
+								iconURL = baseURL.Scheme + ":" + iconURL
+							}
+							return
+						}
+					}
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+	f(doc)
+
+	if iconURL == "" {
+		return "", fmt.Errorf("icon not found in HTML")
+	}
+
+	return iconURL, nil
+}
+
+func getFileExtension(iconURL string, resp *http.Response) string {
+	ext := filepath.Ext(iconURL)
+	if ext == "" {
+		// 尝试从 Content-Type 获取文件扩展名
+		contentType := resp.Header.Get("Content-Type")
+		if contentType != "" {
+			exts, _ := mime.ExtensionsByType(contentType)
+			if len(exts) > 0 {
+				ext = exts[0]
+			}
+		}
+	}
+	if ext == "" {
+		// 默认扩展名
+		ext = ".ico"
+	}
+	return ext
 }
 
 func main() {

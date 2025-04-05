@@ -1,6 +1,6 @@
 # 非常简单的个人导航网站
 
-使用 [豆包](https://www.doubao.com/) 开发。
+使用 [豆包](https://www.doubao.com/) 和 [copilot](https://github.com/copilot) 开发。
 
 ## 编译
 
