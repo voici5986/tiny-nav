@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col justify-center items-center font-sans">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 class="text-3xl font-bold text-center mb-6">登录</h1>
+        <form id="loginForm" class="space-y-4">
+            <input type="text" placeholder="用户名" id="username"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300">
+            <input type="password" placeholder="密码" id="password"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring focus:ring-blue-300">
+            <input type="submit" value="登录"
+                class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring focus:ring-blue-300">
+        </form>
+    </div>
+    <script>
+        // 页面加载时检查 token
+        document.addEventListener('DOMContentLoaded', function () {
+            const token = localStorage.getItem('token');
+            if (token) {
+                // 发送请求验证 token
+                fetch('/navigation', {
+                    headers: {
+                        'Authorization': token
+                    }
+                })
+                  .then(response => {
+                        if (response.ok) {
+                            // token 有效，跳转到 nav.html
+                            window.location.href = '/templates/nav.html';
+                        } else {
+                            // token 无效，清除本地存储的 token
+                            localStorage.removeItem('token');
+                        }
+                    })
+                  .catch(error => {
+                        console.error('验证 token 时出错:', error);
+                        localStorage.removeItem('token');
+                    });
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            })
+              .then(response => {
+                    if (response.ok) {
+                        const token = response.headers.get('Authorization');
+                        localStorage.setItem('token', token);
+                        window.location.href = '/templates/nav.html';
+                    } else {
+                        alert('登录失败');
+                    }
+                });
+        });
+    </script>
+</body>
+
+</html>
