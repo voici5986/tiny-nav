@@ -18,14 +18,57 @@
         dialog::backdrop {
             background-color: rgba(0, 0, 0, 0.3);
         }
+
+        .top-bar {
+            background-color: #1f2937;
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .top-bar a {
+            color: white;
+            margin-left: 1rem;
+            text-decoration: none;
+        }
+
+        .bottom-bar {
+            background-color: #1f2937;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .bottom-bar a {
+            color: white;
+            margin-left: 1rem;
+            text-decoration: none;
+        }
     </style>
     <script src="/public/vue.global.js"></script>
     <script src="/public/vue-router.global.js"></script>
 </head>
 
-<body class="bg-gray-100 min-h-screen flex flex-col justify-center items-center font-sans">
-    <div id="app">
-        <router-view></router-view>
+<body class="bg-gray-100 min-h-screen flex flex-col justify-between font-sans">
+    <div id="app" class="flex flex-col items-center w-full">
+
+
+        <router-view class="flex-1 w-full max-w-5xl mt-8"></router-view>
+
+        <div class="bottom-bar">
+            <p>&copy; 2025 导航网站. All rights reserved.</p>
+            <nav>
+                <a href="#/nav">主页</a>
+                <a href="https://xdocs.hanxi.cc" target="_blank">文档</a>
+                <a href="https://github.com/hanxi/tiny-nav" target="_blank">GitHub</a>
+            </nav>
+        </div>
     </div>
     <script>
         const { createApp, ref, onMounted, computed } = Vue;
@@ -100,12 +143,17 @@
         // 导航组件
         const Nav = {
             template: `
-                <div class="bg-gray-800 text-white p-4 w-full flex justify-between items-center">
-                    <h1 class="text-2xl font-bold">导航</h1>
-                    <button @click="openAddDialog"
-                        class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300">新增链接</button>
-                    <button @click="logout"
-                        class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300">退出</button>
+                <div class="top-bar">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold">导航</h1>
+                        <nav>
+                            <a href="#/nav">主页</a>
+                            <a href="https://xdocs.hanxi.cc" target="_blank">文档</a>
+                        </nav>
+                    </div>
+                    <button @click="edit" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300">编辑</button>
+                    <button @click="openAddDialog" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300">新增</button>
+                    <button @click="logout" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300">退出</button>
                 </div>
                 <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-5xl mt-8">
                     <div v-for="(group, category) in groupedLinks" :key="category" class="mb-8">
