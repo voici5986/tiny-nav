@@ -1,17 +1,27 @@
 package main
 
 import (
+	"crypto/rand"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 )
 
 //go:embed templates/*
 var content embed.FS
+
+// token 过期时间
+const (
+	defaultExpireTime = 30 * 24 * time.Hour
+	defaulttokenCount = 10
+)
 
 type User struct {
 	Username string `json:"username"`
@@ -53,6 +63,76 @@ func saveNavigation(nav Navigation) error {
 	return os.WriteFile("navigation.json", data, 0644)
 }
 
+// Token结构体用于存储token及其过期时间
+type Token struct {
+	Value    string
+	ExpireAt time.Time
+}
+
+// TokenStore结构体用于管理token存储
+type TokenStore struct {
+	tokens map[string]Token
+	mu     sync.Mutex
+}
+
+// NewTokenStore创建一个新的TokenStore
+func NewTokenStore() *TokenStore {
+	return &TokenStore{
+		tokens: make(map[string]Token),
+	}
+}
+
+// AddToken添加一个新的token到存储中，如果超过数量则删除最早的token
+func (ts *TokenStore) AddToken(token string, duration time.Duration) {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+
+	if len(ts.tokens) >= defaulttokenCount {
+		oldestToken := ""
+		oldestTime := time.Now()
+		for k, v := range ts.tokens {
+			if v.ExpireAt.Before(oldestTime) {
+				oldestToken = k
+				oldestTime = v.ExpireAt
+			}
+		}
+		delete(ts.tokens, oldestToken)
+	}
+
+	expireAt := time.Now().Add(duration)
+	ts.tokens[token] = Token{Value: token, ExpireAt: expireAt}
+}
+
+// ValidateToken验证token是否有效
+func (ts *TokenStore) ValidateToken(token string) bool {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+
+	t, exists := ts.tokens[token]
+	if !exists {
+		return false
+	}
+	if time.Now().After(t.ExpireAt) {
+		delete(ts.tokens, token)
+		return false
+	}
+	newExpireAt := time.Now().Add(defaultExpireTime)
+	ts.tokens[token] = Token{Value: token, ExpireAt: newExpireAt}
+	return true
+}
+
+var tokenStore = NewTokenStore()
+
+// 生成随机令牌
+func generateToken() (string, error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(b), nil
+}
+
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -67,8 +147,13 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	envUsername := os.Getenv("NAV_USERNAME")
 	envPassword := os.Getenv("NAV_PASSWORD")
 	if user.Username == envUsername && user.Password == envPassword {
-		// 简单返回一个令牌
-		token := "valid_token"
+		// 生成新的令牌
+		token, err := generateToken()
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		tokenStore.AddToken(token, defaultExpireTime)
 		w.Header().Set("Authorization", token)
 		w.WriteHeader(http.StatusOK)
 	} else {
@@ -79,8 +164,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 // 中间件函数验证令牌
 func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		providedToken := r.Header.Get("Authorization")
-		if providedToken != "valid_token" {
+		token := r.Header.Get("Authorization")
+		if !tokenStore.ValidateToken(token) {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -195,22 +280,63 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, file)
 }
 
+// 记录访问日志的中间件
+func logAccessMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		// 创建一个响应记录器来捕获状态码
+		lrw := &loggingResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+		next.ServeHTTP(lrw, r)
+		duration := time.Since(start)
+		log.Printf("%s - %s %s %d %v", r.RemoteAddr, r.Method, r.URL.Path, lrw.statusCode, duration)
+	})
+}
+
+// 自定义响应写入器，用于记录状态码
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (lrw *loggingResponseWriter) WriteHeader(code int) {
+	lrw.statusCode = code
+	lrw.ResponseWriter.WriteHeader(code)
+}
+
+// 调试接口，输出所有的 token
+func debugTokensHandler(w http.ResponseWriter, r *http.Request) {
+	tokenStore.mu.Lock()
+	defer tokenStore.mu.Unlock()
+
+	var tokens []string
+	for _, token := range tokenStore.tokens {
+		tokens = append(tokens, token.Value)
+	}
+
+	log.Printf("Current tokens: %v", tokens)
+	w.WriteHeader(http.StatusOK)
+}
+
 func main() {
 	port := os.Getenv("LISTEN_PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/navigation", authMiddleware(getNavigationHandler))
-	http.HandleFunc("/navigation/add", authMiddleware(addLinkHandler))
-	http.HandleFunc("/navigation/update/", authMiddleware(updateLinkHandler))
-	http.HandleFunc("/navigation/delete/", authMiddleware(deleteLinkHandler))
-	http.HandleFunc("/", indexHandler)
-	http.Handle("/templates/", http.FileServer(http.FS(content)))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/login", loginHandler)
+	mux.HandleFunc("/navigation", authMiddleware(getNavigationHandler))
+	mux.HandleFunc("/navigation/add", authMiddleware(addLinkHandler))
+	mux.HandleFunc("/navigation/update/", authMiddleware(updateLinkHandler))
+	mux.HandleFunc("/navigation/delete/", authMiddleware(deleteLinkHandler))
+	mux.HandleFunc("/", indexHandler)
+	mux.HandleFunc("/debug/tokens", debugTokensHandler)
+
+	// 使用日志中间件包装 mux
+	logHandler := logAccessMiddleware(mux)
 
 	log.Printf("Server is running on http://localhost:%s\n", port)
-	err := http.ListenAndServe(":"+port, nil)
+	err := http.ListenAndServe(":"+port, logHandler)
 	if err != nil {
 		log.Fatal("Server failed to start: ", err)
 	}
