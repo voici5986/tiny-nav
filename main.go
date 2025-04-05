@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-//go:embed templates/*
+//go:embed public/*
 var content embed.FS
 
 // token 过期时间
@@ -275,7 +275,7 @@ func deleteLinkHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	file, err := content.Open("templates/index.html")
+	file, err := content.Open("public/index.html")
 	if err != nil {
 		http.Error(w, "File not found", http.StatusNotFound)
 		return
@@ -495,6 +495,7 @@ func main() {
 	mux.HandleFunc("/debug/tokens", debugTokensHandler)
 	mux.HandleFunc("/get-icon", authMiddleware(getIconHandler))
 	mux.Handle("/cache/", http.StripPrefix("/cache/", http.FileServer(http.Dir("cache"))))
+	mux.Handle("/public/", http.FileServer(http.FS(content)))
 
 	// 使用日志中间件包装 mux
 	logHandler := logAccessMiddleware(mux)
