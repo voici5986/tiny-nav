@@ -152,6 +152,8 @@
                         </nav>
                     </div>
                     <div class="flex items-center gap-4">
+                        <button v-if="editMode" @click="openAddDialog" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300">新增链接</button>
+                        <button @click="logout" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300">退出</button>
                         <!-- Switch toggle button -->
                         <label class="inline-flex items-center cursor-pointer">
                             <div class="relative">
@@ -162,29 +164,22 @@
                             </div>
                             <span class="ml-2 text-sm font-medium text-gray-900">{{ editMode ? '编辑模式' : '浏览模式' }}</span>
                         </label>
-                        <button v-if="editMode" @click="openAddDialog"
-                            class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300">新增链接</button>
-                        <button @click="logout"
-                            class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300">
-                            退出
-                        </button>
                     </div>
                 </div>
                 <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-5xl mt-8">
                     <div v-for="(group, category) in groupedLinks" :key="category" class="mb-8">
                         <h2 class="text-xl font-bold mb-4">{{ category }}</h2>
                         <div class="flex flex-wrap">
-                            <div v-for="(link, index) in group" :key="index"
-                                class="flex flex-col items-center mb-4 mr-4 w-24">
+                            <div v-for="link in group" :key="link.globalIndex" class="flex flex-col items-center mb-4 mr-4 w-24">
                                 <span class="mb-2">
                                     <img v-if="link.icon.startsWith('http')" :src="link.icon" alt="icon" class="w-12 h-12">
                                     <img v-if="link.icon.startsWith('/data/')" :src="link.icon" alt="icon" class="w-12 h-12">
                                     <span v-else v-html="link.icon" class="w-12 h-12 block text-center"></span>
                                 </span>
                                 <a :href="link.url" class="text-blue-500 hover:underline text-center">{{ link.name }}</a>
-                                <button v-if="editMode" @click="openUpdateDialog(index)"
+                                <button v-if="editMode" @click="openUpdateDialog(link.globalIndex)"
                                     class="bg-yellow-400 text-white px-2 py-1 rounded-md hover:bg-yellow-500 focus:outline-none focus:ring focus:ring-yellow-300 mt-2">修改</button>
-                                <button v-if="editMode" @click="openDeleteDialog(index)"
+                                <button v-if="editMode" @click="openDeleteDialog(link.globalIndex)"
                                     class="bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600 focus:outline-none focus:ring focus:ring-red-300 mt-2">删除</button>
                             </div>
                         </div>
@@ -285,13 +280,19 @@
                 };
 
                 const groupedLinks = computed(() => {
-                    return links.value.reduce((acc, link) => {
-                        if (!acc[link.category]) {
-                            acc[link.category] = [];
+                    const groups = {};
+                    links.value.forEach((link, index) => {
+                        const linkWithIndex = {
+                            ...link,
+                            globalIndex: index
+                        };
+
+                        if (!groups[link.category]) {
+                            groups[link.category] = [];
                         }
-                        acc[link.category].push(link);
-                        return acc;
-                    }, {});
+                        groups[link.category].push(linkWithIndex);
+                    });
+                    return groups;
                 });
 
                 const openAddDialog = () => {
