@@ -22,11 +22,15 @@ import (
 //go:embed public/*
 var content embed.FS
 
-// token 过期时间
 const (
-	defaultExpireTime = 30 * 24 * time.Hour
-	defaulttokenCount = 10
+	defaultExpireTime  = 30 * 24 * time.Hour // token 过期时间
+	defaulttokenCount  = 10                  // 最多存储的 token 数量
+	dataDir            = "data"
+	tokenFileName      = "tokens.json"
+	navigationFileName = "navigation.json"
 )
+
+var tokenStore *TokenStore
 
 type User struct {
 	Username string `json:"username"`
@@ -45,7 +49,13 @@ type Navigation struct {
 }
 
 func loadNavigation() (Navigation, error) {
-	data, err := os.ReadFile("navigation.json")
+	// 确保 data 目录存在
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		return Navigation{}, fmt.Errorf("failed to create data directory: %v", err)
+	}
+
+	navPath := filepath.Join(dataDir, navigationFileName)
+	data, err := os.ReadFile(navPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return Navigation{}, err
@@ -61,11 +71,18 @@ func loadNavigation() (Navigation, error) {
 }
 
 func saveNavigation(nav Navigation) error {
+	// 确保 data 目录存在
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		return fmt.Errorf("failed to create data directory: %v", err)
+	}
+
 	data, err := json.MarshalIndent(nav, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile("navigation.json", data, 0644)
+
+	navPath := filepath.Join(dataDir, navigationFileName)
+	return os.WriteFile(navPath, data, 0644)
 }
 
 // Token结构体用于存储token及其过期时间
@@ -76,14 +93,78 @@ type Token struct {
 
 // TokenStore结构体用于管理token存储
 type TokenStore struct {
-	tokens map[string]Token
-	mu     sync.Mutex
+	tokens   map[string]Token
+	mu       sync.Mutex
+	filePath string
 }
 
-// NewTokenStore创建一个新的TokenStore
 func NewTokenStore() *TokenStore {
-	return &TokenStore{
-		tokens: make(map[string]Token),
+	// 确保data目录存在
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		log.Printf("Failed to create data directory: %v", err)
+	}
+
+	ts := &TokenStore{
+		tokens:   make(map[string]Token),
+		filePath: filepath.Join(dataDir, tokenFileName),
+	}
+
+	// 从文件加载现有token
+	ts.loadTokens()
+
+	return ts
+}
+
+// 保存tokens到文件
+func (ts *TokenStore) saveTokens() error {
+	// 清理过期的token
+	now := time.Now()
+	for k, v := range ts.tokens {
+		if now.After(v.ExpireAt) {
+			delete(ts.tokens, k)
+		}
+	}
+
+	// 将tokens转换为可序列化的格式
+	data, err := json.MarshalIndent(ts.tokens, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error marshaling tokens: %v", err)
+	}
+
+	// 写入文件
+	err = os.WriteFile(ts.filePath, data, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing tokens file: %v", err)
+	}
+
+	return nil
+}
+
+// 从文件加载tokens
+func (ts *TokenStore) loadTokens() {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+
+	data, err := os.ReadFile(ts.filePath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Printf("Error reading tokens file: %v", err)
+		}
+		return
+	}
+
+	err = json.Unmarshal(data, &ts.tokens)
+	if err != nil {
+		log.Printf("Error unmarshaling tokens: %v", err)
+		ts.tokens = make(map[string]Token) // 如果出错，使用空map
+	}
+
+	// 清理已过期的token
+	now := time.Now()
+	for k, v := range ts.tokens {
+		if now.After(v.ExpireAt) {
+			delete(ts.tokens, k)
+		}
 	}
 }
 
@@ -106,6 +187,11 @@ func (ts *TokenStore) AddToken(token string, duration time.Duration) {
 
 	expireAt := time.Now().Add(duration)
 	ts.tokens[token] = Token{Value: token, ExpireAt: expireAt}
+
+	// 保存到文件
+	if err := ts.saveTokens(); err != nil {
+		log.Printf("Error saving tokens: %v", err)
+	}
 }
 
 // ValidateToken验证token是否有效
@@ -123,10 +209,12 @@ func (ts *TokenStore) ValidateToken(token string) bool {
 	}
 	newExpireAt := time.Now().Add(defaultExpireTime)
 	ts.tokens[token] = Token{Value: token, ExpireAt: newExpireAt}
+	// 保存到文件
+	if err := ts.saveTokens(); err != nil {
+		log.Printf("Error saving tokens: %v", err)
+	}
 	return true
 }
-
-var tokenStore = NewTokenStore()
 
 // 生成随机令牌
 func generateToken() (string, error) {
@@ -368,12 +456,12 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	// 创建 cache 目录
-	if _, err := os.Stat("cache"); os.IsNotExist(err) {
-		err := os.Mkdir("cache", 0755)
+	// 创建 data 目录
+	if _, err := os.Stat("data"); os.IsNotExist(err) {
+		err := os.Mkdir("data", 0755)
 		if err != nil {
-			log.Printf("Failed to create cache directory: %v", err)
-			http.Error(w, "Failed to create cache directory", http.StatusInternalServerError)
+			log.Printf("Failed to create data directory: %v", err)
+			http.Error(w, "Failed to create data directory", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -381,9 +469,9 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 	ext := getFileExtension(iconURL, resp)
 	// 生成唯一的文件名
 	fileName := fmt.Sprintf("%s%s", base64.URLEncoding.EncodeToString([]byte(parsedURL.Host)), ext)
-	filePath := filepath.Join("cache", fileName)
+	filePath := filepath.Join("data", fileName)
 
-	// 保存图标到 cache 目录
+	// 保存图标到 data 目录
 	file, err := os.Create(filePath)
 	if err != nil {
 		log.Printf("Failed to create file: %v", err)
@@ -401,7 +489,7 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 返回图标 URL
 	iconResponse := map[string]string{
-		"iconUrl": fmt.Sprintf("/cache/%s", fileName),
+		"iconUrl": fmt.Sprintf("/data/%s", fileName),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(iconResponse)
@@ -485,6 +573,8 @@ func main() {
 		port = "8080"
 	}
 
+	tokenStore = NewTokenStore()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", loginHandler)
 	mux.HandleFunc("/navigation", authMiddleware(getNavigationHandler))
@@ -494,7 +584,7 @@ func main() {
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/debug/tokens", debugTokensHandler)
 	mux.HandleFunc("/get-icon", authMiddleware(getIconHandler))
-	mux.Handle("/cache/", http.StripPrefix("/cache/", http.FileServer(http.Dir("cache"))))
+	mux.Handle("/data/", http.StripPrefix("/data/", http.FileServer(http.Dir("data"))))
 	mux.Handle("/public/", http.FileServer(http.FS(content)))
 
 	// 使用日志中间件包装 mux
