@@ -567,6 +567,37 @@ func getFileExtension(iconURL string, resp *http.Response) string {
 	return ext
 }
 
+// CORS 中间件
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 设置允许的来源
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		// 允许的方法
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+
+		// 允许的请求头
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
+
+		// 允许暴露的响应头
+		w.Header().Set("Access-Control-Expose-Headers", "Authorization")
+
+		// 允许凭证
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		// 缓存预检请求结果
+		w.Header().Set("Access-Control-Max-Age", "86400")
+
+		// 处理预检请求
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	port := os.Getenv("LISTEN_PORT")
 	if port == "" {
@@ -587,11 +618,11 @@ func main() {
 	mux.Handle("/data/", http.StripPrefix("/data/", http.FileServer(http.Dir("data"))))
 	mux.Handle("/public/", http.FileServer(http.FS(content)))
 
-	// 使用日志中间件包装 mux
-	logHandler := logAccessMiddleware(mux)
+	// 使用 CORS 中间件和日志中间件
+	handler := corsMiddleware(logAccessMiddleware(mux))
 
 	log.Printf("Server is running on http://localhost:%s\n", port)
-	err := http.ListenAndServe(":"+port, logHandler)
+	err := http.ListenAndServe(":"+port, handler)
 	if err != nil {
 		log.Fatal("Server failed to start: ", err)
 	}
