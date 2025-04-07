@@ -102,9 +102,9 @@ const groupedLinks = computed(() => {
 
 const fetchLinks = async () => {
     try {
-        const response = await api.getNavigation()
-        console.log(response)
-        store.setLinks(response.data.links)
+        const links = await api.getNavigation()
+        console.log(links)
+        store.setLinks(links)
     } catch (error) {
         alert('获取链接失败')
         router.push('/')

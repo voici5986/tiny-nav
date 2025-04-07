@@ -67,17 +67,18 @@ export const api = {
   },
 
   async getNavigation(): Promise<ApiResponse<Link[]>> {
-    return apiFetch('/navigation')
+    const { data } = await apiFetch('/navigation')
+    return data.links
   },
 
-  async addLink(link: Link): Promise<ApiResponse<Link>> {
+  async addLink(link: Link): Promise<ApiResponse<void>> {
     return apiFetch('/navigation/add', {
       method: 'POST',
       body: JSON.stringify(link)
     })
   },
 
-  async updateLink(index: number, link: Link): Promise<ApiResponse<Link>> {
+  async updateLink(index: number, link: Link): Promise<ApiResponse<void>> {
     return apiFetch(`/navigation/update/${index}`, {
       method: 'PUT',
       body: JSON.stringify(link)
@@ -90,7 +91,8 @@ export const api = {
     })
   },
 
-  async getWebsiteIcon(url: string): Promise<ApiResponse<{ iconUrl: string }>> {
-    return apiFetch(`/get-icon?url=${encodeURIComponent(url)}`)
+  async getWebsiteIcon(url: string): Promise<ApiResponse<string>> {
+    const { data } = await apiFetch(`/get-icon?url=${encodeURIComponent(url)}`)
+    return data.iconUrl
   }
 }
