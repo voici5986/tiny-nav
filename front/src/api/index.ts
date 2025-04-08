@@ -1,5 +1,5 @@
 import { useMainStore } from '@/stores'
-import type { Link, LoginCredentials, ApiResponse } from './types'
+import type { Link, LoginCredentials } from './types'
 
 const apiBase = import.meta.env.VITE_API_BASE
 
@@ -51,7 +51,7 @@ const apiFetch = async <T>(
 }
 
 export const api = {
-  async login(credentials: { username: string; password: string }): Promise<string> {
+  async login(credentials: LoginCredentials): Promise<string> {
     const { headers } = await apiFetch('/login', {
       method: 'POST',
       body: JSON.stringify(credentials)
@@ -66,33 +66,33 @@ export const api = {
     return token
   },
 
-  async getNavigation(): Promise<ApiResponse<Link[]>> {
-    const { data } = await apiFetch('/navigation')
+  async getNavigation(): Promise<Link[]> {
+    const { data } = await apiFetch<{ links: Link[] }>('/navigation')
     return data.links
   },
 
-  async addLink(link: Link): Promise<ApiResponse<void>> {
-    return apiFetch('/navigation/add', {
+  async addLink(link: Link): Promise<void> {
+    apiFetch('/navigation/add', {
       method: 'POST',
       body: JSON.stringify(link)
     })
   },
 
-  async updateLink(index: number, link: Link): Promise<ApiResponse<void>> {
-    return apiFetch(`/navigation/update/${index}`, {
+  async updateLink(index: number, link: Link): Promise<void> {
+    apiFetch(`/navigation/update/${index}`, {
       method: 'PUT',
       body: JSON.stringify(link)
     })
   },
 
-  async deleteLink(index: number): Promise<ApiResponse<void>> {
-    return apiFetch(`/navigation/delete/${index}`, {
+  async deleteLink(index: number): Promise<void> {
+    apiFetch(`/navigation/delete/${index}`, {
       method: 'DELETE'
     })
   },
 
-  async getWebsiteIcon(url: string): Promise<ApiResponse<string>> {
-    const { data } = await apiFetch(`/get-icon?url=${encodeURIComponent(url)}`)
+  async getWebsiteIcon(url: string): Promise<string> {
+    const { data } = await apiFetch<{ iconUrl: string }>(`/get-icon?url=${encodeURIComponent(url)}`)
     return data.iconUrl
   }
 }

@@ -151,7 +151,7 @@ const closeUpdateDialog = () => {
 
 const handleUpdate = async (link: Link) => {
     try {
-        await api.updateLink(store.links.findIndex(l => l.url === link.url), link)
+        await api.updateLink(store.links.findIndex((l: Link) => l.url === link.url), link)
         await fetchLinks()
         closeUpdateDialog()
     } catch (error) {

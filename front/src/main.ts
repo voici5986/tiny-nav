@@ -4,7 +4,7 @@ import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import App from './App.vue'
 import router from './router'
 import 'virtual:uno.css'
-import './assets/main.css'
+import '@unocss/reset/tailwind-compat.css'
 
 // 创建应用实例
 const app = createApp(App)
