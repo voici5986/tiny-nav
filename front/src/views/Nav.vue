@@ -3,10 +3,10 @@
         <!-- 顶部操作栏 -->
         <NavHeader v-model:editMode="editMode" @add="openAddDialog" @logout="handleLogout" />
 
-        <div class="mx-auto max-w-5xl mt-8 p-4">
+        <div class="mx-auto max-w-7xl mt-8 p-3">
             <div v-for="(group, category) in groupedLinks" :key="category" class="mb-8">
                 <h2 class="text-xl font-bold mb-4">{{ category }}</h2>
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                     <LinkCard v-for="link in group" :key="link.globalIndex" :link="link" :edit-mode="editMode"
                         @update="openUpdateDialog" @delete="openDeleteDialog" />
                 </div>
