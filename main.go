@@ -503,7 +503,7 @@ func fetchIconFromHTML(pageURL string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to fetch page, status code: %d", resp.StatusCode)
+		return "", fmt.Errorf("failed to fetch page, status code: %d. pageURL:%s", resp.StatusCode, pageURL)
 	}
 
 	doc, err := html.Parse(resp.Body)
