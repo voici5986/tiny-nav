@@ -4,7 +4,7 @@
             <h1 class="text-xl font-bold">我的导航</h1>
 
             <!-- 右侧菜单 -->
-            <Menu as="div" class="relative">
+            <Menu as="div" class="relative z-100">
                 <div>
                     <MenuButton
                         class="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">

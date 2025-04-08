@@ -13,11 +13,11 @@
             </div>
         </div>
 
-        <LinkDialog v-model:show="isAddDialogOpen" :link="newLink" mode="add" @submit="handleAdd"
-            @close="closeAddDialog" />
+        <LinkDialog v-model:show="isAddDialogOpen" :link="newLink" :categories="existingCategories" mode="add"
+            @submit="handleAdd" @close="closeAddDialog" />
 
-        <LinkDialog v-model:show="isUpdateDialogOpen" :link="updatedLink" mode="update" @submit="handleUpdate"
-            @close="closeUpdateDialog" />
+        <LinkDialog v-model:show="isUpdateDialogOpen" :link="updatedLink" :categories="existingCategories" mode="update"
+            @submit="handleUpdate" @close="closeUpdateDialog" />
 
         <Dialog v-model:open="isDeleteDialogOpen" @close="closeDeleteDialog" class="relative z-10">
             <div class="fixed inset-0 bg-black bg-opacity-25" />
@@ -76,6 +76,17 @@ const updatedLink = ref<Link>({
     url: '',
     icon: '',
     category: ''
+})
+
+// 添加获取已存在分类的计算属性
+const existingCategories = computed(() => {
+    const categories = new Set<string>()
+    store.links.forEach((link: Link) => {
+        if (link.category) {
+            categories.add(link.category)
+        }
+    })
+    return Array.from(categories)
 })
 
 const groupedLinks = computed(() => {

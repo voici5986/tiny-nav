@@ -39,13 +39,51 @@
                     </div>
                 </div>
 
-                <!-- 分类输入 -->
+                <!-- 分类输入（使用 Combobox） -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        分类
-                    </label>
-                    <input v-model="formData.category" type="text" required
-                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <Combobox v-model="formData.category">
+                        <div class="relative">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                分类
+                            </label>
+                            <div
+                                class="relative w-full cursor-default overflow-hidden rounded-md bg-white text-left border border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                                <ComboboxInput class="w-full border-none px-3 py-2 text-gray-900 focus:outline-none"
+                                    :displayValue="(category: string) => category" @change="handleCategoryInput" />
+                                <ComboboxButton class="absolute inset-y-0 right-0 flex items-center pr-2">
+                                    <div class="i-mdi-chevron-up-down h-5 w-5 text-gray-400" aria-hidden="true" />
+                                </ComboboxButton>
+                            </div>
+                            <TransitionRoot leave="transition ease-in duration-100" leaveFrom="opacity-100"
+                                leaveTo="opacity-0" @after-leave="query = ''">
+                                <ComboboxOptions
+                                    class="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                                    <ComboboxOption v-if="filteredCategories.length === 0 && query !== ''"
+                                        :value="query" v-slot="{ active }">
+                                        <li class="relative cursor-default select-none py-2 px-4" :class="{
+                                            'bg-blue-500 text-white': active,
+                                            'text-gray-900': !active
+                                        }">
+                                            创建新分类 "{{ query }}"
+                                        </li>
+                                    </ComboboxOption>
+
+                                    <ComboboxOption v-for="category in filteredCategories" :key="category"
+                                        :value="category" as="template" v-slot="{ selected, active }">
+                                        <li class="relative cursor-default select-none py-2 px-4" :class="{
+                                            'bg-blue-500 text-white': active,
+                                            'text-gray-900': !active
+                                        }">
+                                            <span class="block truncate"
+                                                :class="{ 'font-medium': selected, 'font-normal': !selected }">
+                                                {{ category }}
+                                            </span>
+                                        </li>
+                                    </ComboboxOption>
+                                </ComboboxOptions>
+                            </TransitionRoot>
+                        </div>
+                    </Combobox>
                 </div>
 
                 <!-- 按钮组 -->
@@ -65,20 +103,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import type { Link } from '@/api/types'
 import { api } from '@/api'
+import {
+    Combobox,
+    ComboboxInput,
+    ComboboxButton,
+    ComboboxOptions,
+    ComboboxOption,
+    TransitionRoot,
+} from '@headlessui/vue'
 
 const props = defineProps<{
     show: boolean
     mode: 'add' | 'update'
     link?: Link
+    categories: string[] // 新增 categories prop
 }>()
 
 const emit = defineEmits<{
     (e: 'update:show', value: boolean): void
     (e: 'submit', value: Link): void
 }>()
+
+const query = ref('')
+const isLoading = ref(false)
 
 const formData = ref({
     name: '',
@@ -87,7 +137,22 @@ const formData = ref({
     category: ''
 })
 
-const isLoading = ref(false)
+// 处理分类输入
+const handleCategoryInput = (event: Event) => {
+    const value = (event.target as HTMLInputElement).value
+    query.value = value
+    // 直接更新 formData 的 category
+    formData.value.category = value
+}
+
+// 根据输入过滤分类
+const filteredCategories = computed(() => {
+    if (query.value === '') return props.categories
+
+    return props.categories.filter((category) =>
+        category.toLowerCase().includes(query.value.toLowerCase())
+    )
+})
 
 // 当 link 属性改变时更新表单数据
 watch(() => props.link, (newLink) => {
@@ -119,11 +184,6 @@ const fetchIcon = async () => {
     } finally {
         isLoading.value = false
     }
-}
-
-// 处理图标加载错误
-const handleIconError = () => {
-    formData.value.icon = '' // 清空无效的图标URL
 }
 
 // 提交表单
