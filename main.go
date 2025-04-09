@@ -447,40 +447,26 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	// 创建 data 目录
-	if _, err := os.Stat("data"); os.IsNotExist(err) {
-		err := os.Mkdir("data", 0755)
-		if err != nil {
-			log.Printf("Failed to create data directory: %v", err)
-			http.Error(w, "Failed to create data directory", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	ext := getFileExtension(iconURL, resp)
-	// 生成唯一的文件名
-	fileName := fmt.Sprintf("%s%s", base64.URLEncoding.EncodeToString([]byte(parsedURL.Host)), ext)
-	filePath := filepath.Join("data", fileName)
-
-	// 保存图标到 data 目录
-	file, err := os.Create(filePath)
+	// 读取图标数据
+	iconData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Failed to create file: %v", err)
-		http.Error(w, "Failed to create file", http.StatusInternalServerError)
-		return
-	}
-	defer file.Close()
-
-	_, err = io.Copy(file, resp.Body)
-	if err != nil {
-		log.Printf("Failed to save icon: %v", err)
-		http.Error(w, "Failed to save icon", http.StatusInternalServerError)
+		log.Printf("Failed to read icon data: %v", err)
+		http.Error(w, "Failed to read icon data", http.StatusInternalServerError)
 		return
 	}
 
-	// 返回图标 URL
+	// 将图标数据转换为base64编码
+	base64Data := base64.StdEncoding.EncodeToString(iconData)
+
+	// 获取Content-Type
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "image/x-icon" // 默认Content-Type
+	}
+
+	// 返回base64编码的图标数据
 	iconResponse := map[string]string{
-		"iconUrl": fmt.Sprintf("/data/%s", fileName),
+		"iconData": fmt.Sprintf("data:%s;base64,%s", contentType, base64Data),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(iconResponse)

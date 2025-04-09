@@ -92,7 +92,7 @@ export const api = {
   },
 
   async getWebsiteIcon(url: string): Promise<string> {
-    const { data } = await apiFetch<{ iconUrl: string }>(`/get-icon?url=${encodeURIComponent(url)}`)
-    return data.iconUrl
+    const { data } = await apiFetch<{ iconData: string }>(`/get-icon?url=${encodeURIComponent(url)}`)
+    return data.iconData
   }
 }

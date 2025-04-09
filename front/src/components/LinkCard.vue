@@ -45,7 +45,6 @@
 import { ref } from 'vue'
 import type { Link } from '@/api/types'
 
-const apiBase = import.meta.env.VITE_API_BASE
 const defaultIcon = ref<SVGElement>()
 
 interface Props {
@@ -73,11 +72,6 @@ const getIconUrl = (icon: string) => {
 
     if (icon.startsWith('http')) {
         return icon
-    }
-
-    if (icon.startsWith('/data/')) {
-        const url = `${apiBase}${icon}`
-        return url
     }
 
     return icon
