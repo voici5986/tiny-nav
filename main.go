@@ -434,11 +434,12 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 
 	iconURL := fmt.Sprintf("%s://%s/favicon.ico", parsedURL.Scheme, parsedURL.Host)
 	resp, err := http.Get(iconURL)
-	log.Printf("Fetching icon from URL:%s code:%d Content-Type:%s", iconURL, resp.StatusCode, resp.Header.Get("Content-Type"))
+	log.Printf("Fetching icon from URL:%s", iconURL)
 	if err != nil || resp.StatusCode != http.StatusOK ||
 		resp.Header.Get("Content-Type") != "image/x-icon" ||
 		resp.Header.Get("Content-Type") != "image/vnd.microsoft.icon" {
 
+		log.Printf("Try fetching icon from HTML URL:%s code:%d Content-Type:%s", iconURL, resp.StatusCode, resp.Header.Get("Content-Type"))
 		// 尝试解析 HTML 来获取图标
 		iconURL, err = fetchIconFromHTML(urlParam)
 		if err != nil {
