@@ -2,3 +2,4 @@ navigation.json
 tiny-nav
 cache/
 dist/
+/public/
