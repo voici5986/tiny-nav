@@ -51,7 +51,6 @@ import type { Link } from '@/api/types'
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/vue'
 import LinkCard from '@/components/LinkCard.vue'
 import LinkDialog from '@/components/LinkDialog.vue'
-import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue'
 import AppLayout from '@/components/AppLayout.vue'
 import NavHeader from '@/components/NavHeader.vue'
 

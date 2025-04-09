@@ -49,7 +49,8 @@
                             <div
                                 class="relative w-full cursor-default overflow-hidden rounded-md bg-white text-left border border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
                                 <ComboboxInput class="w-full border-none px-3 py-2 text-gray-900 focus:outline-none"
-                                    :displayValue="(category: string) => category" @change="handleCategoryInput" />
+                                    :displayValue="(category: unknown) => category as string"
+                                    @change="handleCategoryInput" />
                                 <ComboboxButton class="absolute inset-y-0 right-0 flex items-center pr-2">
                                     <div class="i-mdi-chevron-up-down h-5 w-5 text-gray-400" aria-hidden="true" />
                                 </ComboboxButton>

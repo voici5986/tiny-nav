@@ -40,14 +40,5 @@ export const useMainStore = defineStore('main', {
     }
   },
 
-  persist: {
-    enabled: true,
-    strategies: [
-      {
-        key: 'main-store',
-        storage: localStorage,
-        paths: ['token', 'links']
-      }
-    ]
-  }
+  persist: true
 })

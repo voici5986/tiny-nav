@@ -18,7 +18,7 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach(async (to, from) => {
+router.beforeEach(async (to, _) => {
   const store = useMainStore()
 
   // 如果路由需要认证

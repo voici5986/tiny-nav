@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"golang.org/x/net/html"
 	"io"
+	"io/fs"
 	"log"
 	"mime"
 	"net/http"
@@ -20,7 +21,7 @@ import (
 )
 
 //go:embed public/*
-var content embed.FS
+var embeddedFiles embed.FS
 
 const (
 	defaultExpireTime  = 30 * 24 * time.Hour // token 过期时间
@@ -362,17 +363,6 @@ func deleteLinkHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	file, err := content.Open("public/index.html")
-	if err != nil {
-		http.Error(w, "File not found", http.StatusNotFound)
-		return
-	}
-	defer file.Close()
-	w.Header().Set("Content-Type", "text/html")
-	io.Copy(w, file)
-}
-
 // 记录访问日志的中间件
 func logAccessMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -613,17 +603,22 @@ func main() {
 	mux.HandleFunc("/navigation/add", authMiddleware(addLinkHandler))
 	mux.HandleFunc("/navigation/update/", authMiddleware(updateLinkHandler))
 	mux.HandleFunc("/navigation/delete/", authMiddleware(deleteLinkHandler))
-	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/debug/tokens", debugTokensHandler)
 	mux.HandleFunc("/get-icon", authMiddleware(getIconHandler))
-	mux.Handle("/data/", http.StripPrefix("/data/", http.FileServer(http.Dir("data"))))
-	mux.Handle("/public/", http.FileServer(http.FS(content)))
+
+	// 静态文件
+	staticFiles, err := fs.Sub(embeddedFiles, "public")
+	if err != nil {
+		panic(err)
+	}
+	fileServer := http.FileServer(http.FS(staticFiles))
+	mux.Handle("/", fileServer)
 
 	// 使用 CORS 中间件和日志中间件
 	handler := corsMiddleware(logAccessMiddleware(mux))
 
 	log.Printf("Server is running on http://localhost:%s\n", port)
-	err := http.ListenAndServe(":"+port, handler)
+	err = http.ListenAndServe(":"+port, handler)
 	if err != nil {
 		log.Fatal("Server failed to start: ", err)
 	}
