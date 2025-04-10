@@ -1,17 +1,18 @@
 <template>
     <div class="bg-white shadow">
-        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
-            <h1 class="text-xl font-bold">我的导航</h1>
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <img src="/icon.svg" alt="网站图标" class="w-8 h-8" />
+                <h1 class="text-xl font-bold text-gray-800">我的导航</h1>
+            </div>
 
             <!-- 右侧菜单 -->
             <Menu as="div" class="relative z-100">
                 <div>
                     <MenuButton
-                        class="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                         <span class="text-sm text-gray-700">菜单</span>
-                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
+                        <div class="i-mdi-chevron-down text-gray-500 text-xl"></div>
                     </MenuButton>
                 </div>
 
@@ -27,14 +28,11 @@
                             <MenuItem v-slot="{ active }" as="template">
                             <button @click="toggleEditMode" :class="[
                                 active ? 'bg-gray-100' : '',
-                                'group flex w-full items-center px-4 py-2 text-sm text-gray-700'
+                                'group flex w-full items-center px-4 py-2 text-sm text-gray-700 transition-colors'
                             ]">
-                                <svg class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500"
-                                    :class="{ 'text-blue-500': editMode }" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                </svg>
+                                <div class="mr-3 text-xl"
+                                    :class="[editMode ? 'i-mdi-eye text-blue-500' : 'i-mdi-pencil text-gray-400 group-hover:text-gray-500']">
+                                </div>
                                 {{ editMode ? '浏览模式' : '编辑模式' }}
                             </button>
                             </MenuItem>
@@ -43,13 +41,10 @@
                             <MenuItem v-slot="{ active }" as="template">
                             <button @click="$emit('add')" :class="[
                                 active ? 'bg-gray-100' : '',
-                                'group flex w-full items-center px-4 py-2 text-sm text-gray-700'
+                                'group flex w-full items-center px-4 py-2 text-sm text-gray-700 transition-colors'
                             ]">
-                                <svg class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" fill="none"
-                                    stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 4v16m8-8H4" />
-                                </svg>
+                                <div class="i-mdi-plus-circle mr-3 text-xl text-gray-400 group-hover:text-gray-500">
+                                </div>
                                 添加网站
                             </button>
                             </MenuItem>
@@ -60,13 +55,10 @@
                             <MenuItem v-slot="{ active }" as="template">
                             <button @click="$emit('logout')" :class="[
                                 active ? 'bg-gray-100' : '',
-                                'group flex w-full items-center px-4 py-2 text-sm text-gray-700'
+                                'group flex w-full items-center px-4 py-2 text-sm text-gray-700 transition-colors'
                             ]">
-                                <svg class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" fill="none"
-                                    stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                </svg>
+                                <div class="i-mdi-logout mr-3 text-xl text-gray-400 group-hover:text-gray-500">
+                                </div>
                                 退出登录
                             </button>
                             </MenuItem>
