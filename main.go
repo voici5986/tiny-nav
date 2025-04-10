@@ -47,8 +47,8 @@ type Link struct {
 }
 
 type Navigation struct {
-	Links     []Link   `json:"links"`
-	Categorys []string `json:"categorys"`
+	Links      []Link   `json:"links"`
+	Categories []string `json:"categories"`
 }
 
 func loadNavigation() (Navigation, error) {
@@ -239,14 +239,14 @@ func updateCategories(nav *Navigation) {
 		}
 	}
 
-	// 如果 Categorys 为空，初始化它
-	if nav.Categorys == nil {
-		nav.Categorys = make([]string, 0)
+	// 如果 Categories 为空，初始化它
+	if nav.Categories == nil {
+		nav.Categories = make([]string, 0)
 	}
 
 	// 删除不存在的分类（保持原有顺序）
-	newCategories := make([]string, 0, len(nav.Categorys))
-	for _, category := range nav.Categorys {
+	newCategories := make([]string, 0, len(nav.Categories))
+	for _, category := range nav.Categories {
 		if _, exists := currentCategories[category]; exists {
 			newCategories = append(newCategories, category)
 			delete(currentCategories, category) // 从当前分类集合中删除已处理的分类
@@ -258,7 +258,7 @@ func updateCategories(nav *Navigation) {
 		newCategories = append(newCategories, category)
 	}
 
-	nav.Categorys = newCategories
+	nav.Categories = newCategories
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -454,10 +454,10 @@ func updateSortIndicesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateCategorysRequest struct {
-	Categorys []string `json:"categorys"`
+	Categories []string `json:"categories"`
 }
 
-func updateCategorysHandler(w http.ResponseWriter, r *http.Request) {
+func updateCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -488,7 +488,7 @@ func updateCategorysHandler(w http.ResponseWriter, r *http.Request) {
 	// 验证新的分类列表包含所有正在使用的分类
 	for category := range currentCategories {
 		found := false
-		for _, newCategory := range req.Categorys {
+		for _, newCategory := range req.Categories {
 			if category == newCategory {
 				found = true
 				break
@@ -501,7 +501,7 @@ func updateCategorysHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 更新分类列表
-	nav.Categorys = req.Categorys
+	nav.Categories = req.Categories
 
 	// 保存更新后的导航数据
 	if err := saveNavigation(nav); err != nil {
@@ -746,7 +746,7 @@ func main() {
 	mux.HandleFunc("/navigation/update/", authMiddleware(updateLinkHandler))
 	mux.HandleFunc("/navigation/delete/", authMiddleware(deleteLinkHandler))
 	mux.HandleFunc("/navigation/sort", authMiddleware(updateSortIndicesHandler))
-	mux.HandleFunc("/navigation/categorys", authMiddleware(updateCategorysHandler))
+	mux.HandleFunc("/navigation/categories", authMiddleware(updateCategoriesHandler))
 	mux.HandleFunc("/debug/tokens", debugTokensHandler)
 	mux.HandleFunc("/get-icon", authMiddleware(getIconHandler))
 

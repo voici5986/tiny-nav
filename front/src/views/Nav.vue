@@ -4,18 +4,34 @@
         <NavHeader v-model:editMode="editMode" @add="openAddDialog" @logout="handleLogout" />
 
         <div class="mx-auto max-w-7xl mt-8 p-3">
-            <div v-for="(_, category) in groupedLinksData" :key="category" class="mb-8">
-                <h2 class="text-xl font-bold mb-4">{{ category }}</h2>
-                <draggable v-model="groupedLinksData[category]" group="categories" handle=".drag-handle"
-                    :itemKey="'globalIndex'" @end="onDragEnd($event, category)"
-                    class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                    <!-- 使用 item 插槽传递数据 -->
-                    <template #item="{ element }">
-                        <LinkCard :link="element" :edit-mode="editMode" :key="element.globalIndex"
-                            @update="openUpdateDialog" @delete="openDeleteDialog" />
-                    </template>
-                </draggable>
-            </div>
+            <draggable v-model="categories" @end="onCategoryDragEnd" item-key="category" handle=".category-drag-handle">
+                <template #item="{ element: category }">
+                    <div :key="category" class="mb-8">
+                        <div class="flex items-center gap-2 text-xl font-bold mb-4">
+                            <button v-if="editMode"
+                                class="flex items-center justify-center text-gray-400 hover:text-blue-500 rounded-full shadow-md transition-all hover:scale-110 category-drag-handle"
+                                title="拖动分类">
+                                <div class="i-mdi-drag text-xl"></div>
+                            </button>
+                            <div v-else class="i-mdi-chevron-double-right text-xl text-gray-400"></div>
+                            <div class="flex items-center">
+                                <h2>{{ category }}</h2>
+                            </div>
+                        </div>
+
+                        <!-- 链接卡片拖拽区域 -->
+                        <draggable v-model="groupedLinksData[category]" group="categories" handle=".drag-handle"
+                            :data-category="category" :itemKey="'globalIndex'" @end="onDragEnd($event, category)"
+                            class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                            <!-- 使用 item 插槽传递数据 -->
+                            <template #item="{ element }">
+                                <LinkCard :link="element" :edit-mode="editMode" :key="element.globalIndex"
+                                    @update="openUpdateDialog" @delete="openDeleteDialog" />
+                            </template>
+                        </draggable>
+                    </div>
+                </template>
+            </draggable>
         </div>
 
         <LinkDialog v-model:show="isAddDialogOpen" :link="newLink" :categories="existingCategories" mode="add"
@@ -96,6 +112,34 @@ const existingCategories = computed(() => {
     return Array.from(categories)
 })
 
+const categories = ref<string[]>([])
+const updateCategories = () => {
+    const links = store.links || []
+    // 创建当前链接中存在的分类集合
+    const currentCategories = new Set<string>()
+    for (const link of links) {
+        if (link.category) {
+            currentCategories.add(link.category)
+        }
+    }
+
+    // 删除不存在的分类（保持原有顺序）
+    const newCategories: string[] = []
+    const storeCategories = store.categories || []
+
+    // 保持原有顺序，只保留仍在使用的分类
+    for (const category of storeCategories) {
+        if (currentCategories.has(category)) {
+            newCategories.push(category)
+            currentCategories.delete(category) // 从当前分类集合中删除已处理的分类
+        }
+    }
+
+    // 添加新的分类（将剩余的分类追加到列表末尾）
+    newCategories.push(...Array.from(currentCategories))
+    categories.value = newCategories
+}
+
 const groupedLinksData = ref<Record<string, (Link & { globalIndex: number })[]>>({})
 // 计算分组数据
 const updateGroupedLinksData = () => {
@@ -136,12 +180,16 @@ watch(() => store.links, () => {
     updateGroupedLinksData()
 }, { immediate: true })
 
+watch(() => store.categories, () => {
+    updateCategories()
+}, { immediate: true })
 
 const fetchLinks = async () => {
     try {
-        const links = await api.getNavigation()
-        console.log(links)
+        const { links, categories } = await api.getNavigation()
+        console.log(links, categories)
         store.setLinks(links)
+        store.setCategories(categories)
     } catch (error) {
         alert('获取链接失败')
         router.push('/')
@@ -228,7 +276,7 @@ const onDragEnd = async (event: any, category: string) => {
 
     // 存储所有需要更新的分类
     const categoriesToUpdate = new Set<string>([category])
-    const toCategory = event.to.parentElement.querySelector('h2').textContent.trim()
+    const toCategory = event.to.dataset.category
 
     // 如果是跨分类拖拽，需要添加目标分类
     if (event.from !== event.to) {
@@ -284,6 +332,24 @@ const onDragEnd = async (event: any, category: string) => {
     }
 }
 
+const onCategoryDragEnd = async (event: any) => {
+    if (event.oldIndex === event.newIndex) {
+        return
+    }
+
+    try {
+        // 调用更新分类顺序的 API
+        await api.updateCategories(categories.value)
+        // 更新本地数据
+        store.categories = categories.value
+    } catch (error) {
+        alert('更新分类顺序失败')
+        console.error('Failed to update category order:', error)
+        // 发生错误时恢复原始顺序
+        updateGroupedLinksData()
+    }
+}
+
 onMounted(() => {
     if (!store.token) {
         router.push('/')
@@ -292,3 +358,10 @@ onMounted(() => {
     fetchLinks()
 })
 </script>
+
+<style scoped>
+.category-drag-handle {
+    cursor: move;
+    touch-action: none;
+}
+</style>

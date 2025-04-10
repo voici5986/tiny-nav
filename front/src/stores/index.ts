@@ -5,12 +5,14 @@ import { api } from '@/api'
 interface State {
   token: string | null
   links: Link[]
+  categories: string[]
 }
 
 export const useMainStore = defineStore('main', {
   state: (): State => ({
     token: null,
-    links: []
+    links: [],
+    categories: [],
   }),
 
   actions: {
@@ -19,6 +21,9 @@ export const useMainStore = defineStore('main', {
     },
     setLinks(links: Link[]) {
       this.links = Array.isArray(links) ? links : []
+    },
+    setCategories(categories: string[]) {
+      this.categories = Array.isArray(categories) ? categories : []
     },
     logout() {
       this.token = null

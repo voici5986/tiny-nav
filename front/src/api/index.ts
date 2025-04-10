@@ -66,9 +66,9 @@ export const api = {
     return token
   },
 
-  async getNavigation(): Promise<Link[]> {
-    const { data } = await apiFetch<{ links: Link[] }>('/navigation')
-    return data.links
+  async getNavigation(): Promise<{ links: Link[], categories: string[] }> {
+    const { data } = await apiFetch<{ links: Link[], categories: string[] }>('/navigation')
+    return data
   },
 
   async addLink(link: Link): Promise<void> {
@@ -97,9 +97,16 @@ export const api = {
   },
 
   async updateSortIndices(updates: SortIndexUpdate[]): Promise<void> {
-    await apiFetch('/navigation/sort', {
+    apiFetch('/navigation/sort', {
       method: 'PUT',
       body: JSON.stringify({ updates })
+    })
+  },
+
+  async updateCategories(categories: string[]): Promise<void> {
+    apiFetch('/navigation/categories', {
+      method: 'PUT',
+      body: JSON.stringify({ categories })
     })
   }
 }
