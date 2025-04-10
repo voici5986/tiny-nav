@@ -6,10 +6,15 @@
         <div class="mx-auto max-w-7xl mt-8 p-3">
             <div v-for="(group, category) in groupedLinks" :key="category" class="mb-8">
                 <h2 class="text-xl font-bold mb-4">{{ category }}</h2>
-                <div class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                    <LinkCard v-for="link in group" :key="link.globalIndex" :link="link" :edit-mode="editMode"
-                        @update="openUpdateDialog" @delete="openDeleteDialog" />
-                </div>
+                <draggable v-model="groupedLinks[category]" group="categories" handle=".drag-handle"
+                    :itemKey="'globalIndex'" @end="onDragEnd"
+                    class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    <!-- 使用 item 插槽传递数据 -->
+                    <template #item="{ element }">
+                        <LinkCard :link="element" :edit-mode="editMode" :key="element.globalIndex"
+                            @update="openUpdateDialog" @delete="openDeleteDialog" />
+                    </template>
+                </draggable>
             </div>
         </div>
 
@@ -47,6 +52,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMainStore } from '@/stores'
 import { api } from '@/api'
+import draggable from 'vuedraggable'
 import type { Link } from '@/api/types'
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/vue'
 import LinkCard from '@/components/LinkCard.vue'
@@ -93,7 +99,6 @@ const groupedLinks = computed(() => {
     const links = store.links || []
     const groups: Record<string, (Link & { globalIndex: number })[]> = {}
 
-    console.log(links)
     if (Array.isArray(links)) {
         links.forEach((link, index) => {
             const linkWithIndex = {
@@ -190,6 +195,21 @@ const handleDelete = async () => {
         alert('删除失败')
     }
 }
+
+const onDragEnd = async (event) => {
+    // 检查是否有拖动操作
+    if (!event || !event.from || !event.to) {
+        console.warn("无有效拖动数据")
+        return;
+    }
+
+    // 获取拖动后的分类
+    const oldGlobalIndex = event.oldIndex
+    const newGlobalIndex = event.newIndex
+    console.log(oldGlobalIndex, newGlobalIndex)
+
+    // TODO:
+};
 
 onMounted(() => {
     if (!store.token) {

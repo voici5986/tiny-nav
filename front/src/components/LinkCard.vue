@@ -31,6 +31,14 @@
                 <div class="i-mdi-pencil text-xl"></div>
             </button>
 
+            <!-- 拖动图标 -->
+            <button
+                class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-blue-500 rounded-full shadow-md transition-all hover:scale-110 drag-handle"
+                title="拖动">
+                <div class="i-mdi-drag text-xl"></div>
+            </button>
+
+
             <!-- 删除按钮 -->
             <button @click.prevent="$emit('delete', link.globalIndex)"
                 class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 bg-white rounded-full shadow-md transition-all hover:scale-110"
