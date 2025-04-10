@@ -4,7 +4,7 @@
         <NavHeader v-model:editMode="editMode" @add="openAddDialog" @logout="handleLogout" />
 
         <div class="mx-auto max-w-7xl mt-8 p-3">
-            <div v-for="(group, category) in groupedLinks" :key="category" class="mb-8">
+            <div v-for="(_, category) in groupedLinks" :key="category" class="mb-8">
                 <h2 class="text-xl font-bold mb-4">{{ category }}</h2>
                 <draggable v-model="groupedLinks[category]" group="categories" handle=".drag-handle"
                     :itemKey="'globalIndex'" @end="onDragEnd"
@@ -196,7 +196,7 @@ const handleDelete = async () => {
     }
 }
 
-const onDragEnd = async (event) => {
+const onDragEnd = async (event: any) => {
     // 检查是否有拖动操作
     if (!event || !event.from || !event.to) {
         console.warn("无有效拖动数据")

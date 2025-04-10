@@ -39,14 +39,16 @@ type User struct {
 }
 
 type Link struct {
-	Name     string `json:"name"`
-	Url      string `json:"url"`
-	Icon     string `json:"icon"`
-	Category string `json:"category"`
+	Name      string `json:"name"`
+	Url       string `json:"url"`
+	Icon      string `json:"icon"`
+	Category  string `json:"category"`
+	SortIndex int    `json:"sortIndex"`
 }
 
 type Navigation struct {
-	Links []Link `json:"links"`
+	Links     []Link   `json:"links"`
+	Categorys []string `json:"categorys"`
 }
 
 func loadNavigation() (Navigation, error) {
@@ -227,6 +229,38 @@ func generateToken() (string, error) {
 	return base64.StdEncoding.EncodeToString(b), nil
 }
 
+// updateCategories 更新导航的分类列表，保持原有顺序，删除不存在的分类，添加新的分类
+func updateCategories(nav *Navigation) {
+	// 创建当前链接中存在的分类集合
+	currentCategories := make(map[string]struct{})
+	for _, link := range nav.Links {
+		if link.Category != "" {
+			currentCategories[link.Category] = struct{}{}
+		}
+	}
+
+	// 如果 Categorys 为空，初始化它
+	if nav.Categorys == nil {
+		nav.Categorys = make([]string, 0)
+	}
+
+	// 删除不存在的分类（保持原有顺序）
+	newCategories := make([]string, 0, len(nav.Categorys))
+	for _, category := range nav.Categorys {
+		if _, exists := currentCategories[category]; exists {
+			newCategories = append(newCategories, category)
+			delete(currentCategories, category) // 从当前分类集合中删除已处理的分类
+		}
+	}
+
+	// 添加新的分类（将剩余的分类追加到列表末尾）
+	for category := range currentCategories {
+		newCategories = append(newCategories, category)
+	}
+
+	nav.Categorys = newCategories
+}
+
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -299,6 +333,7 @@ func addLinkHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	nav.Links = append(nav.Links, newLink)
+	updateCategories(&nav)
 	err = saveNavigation(nav)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -330,6 +365,7 @@ func updateLinkHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	nav.Links[index] = updatedLink
+	updateCategories(&nav)
 	err = saveNavigation(nav)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -355,12 +391,124 @@ func deleteLinkHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	nav.Links = append(nav.Links[:index], nav.Links[index+1:]...)
+	updateCategories(&nav)
 	err = saveNavigation(nav)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+type UpdateSortIndexRequest struct {
+	Updates []struct {
+		Index     int `json:"index"`     // 链接在数组中的索引
+		SortIndex int `json:"sortIndex"` // 新的排序索引值
+	} `json:"updates"`
+}
+
+func updateSortIndicesHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// 解析请求体
+	var req UpdateSortIndexRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	// 加载当前导航数据
+	nav, err := loadNavigation()
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// 批量更新 sortIndex
+	for _, update := range req.Updates {
+		if update.Index < 0 || update.Index >= len(nav.Links) {
+			http.Error(w, fmt.Sprintf("Invalid index: %d", update.Index), http.StatusBadRequest)
+			return
+		}
+		nav.Links[update.Index].SortIndex = update.SortIndex
+	}
+
+	// 保存更新后的导航数据
+	if err := saveNavigation(nav); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+type UpdateCategorysRequest struct {
+	Categorys []string `json:"categorys"`
+}
+
+func updateCategorysHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// 解析请求体
+	var req UpdateCategorysRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	// 加载当前导航数据
+	nav, err := loadNavigation()
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// 获取当前所有实际使用的分类
+	currentCategories := make(map[string]struct{})
+	for _, link := range nav.Links {
+		if link.Category != "" {
+			currentCategories[link.Category] = struct{}{}
+		}
+	}
+
+	// 验证新的分类列表包含所有正在使用的分类
+	for category := range currentCategories {
+		found := false
+		for _, newCategory := range req.Categorys {
+			if category == newCategory {
+				found = true
+				break
+			}
+		}
+		if !found {
+			http.Error(w, fmt.Sprintf("Cannot remove category '%s' that is still in use", category), http.StatusBadRequest)
+			return
+		}
+	}
+
+	// 更新分类列表
+	nav.Categorys = req.Categorys
+
+	// 保存更新后的导航数据
+	if err := saveNavigation(nav); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// 返回更新后的完整导航数据
+	data, err := json.MarshalIndent(nav, "", "  ")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 }
 
 // 记录访问日志的中间件
@@ -589,6 +737,8 @@ func main() {
 	mux.HandleFunc("/navigation/add", authMiddleware(addLinkHandler))
 	mux.HandleFunc("/navigation/update/", authMiddleware(updateLinkHandler))
 	mux.HandleFunc("/navigation/delete/", authMiddleware(deleteLinkHandler))
+	mux.HandleFunc("/navigation/sort", authMiddleware(updateSortIndicesHandler))
+	mux.HandleFunc("/navigation/categorys", authMiddleware(updateCategorysHandler))
 	mux.HandleFunc("/debug/tokens", debugTokensHandler)
 	mux.HandleFunc("/get-icon", authMiddleware(getIconHandler))
 
