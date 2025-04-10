@@ -135,7 +135,8 @@ const formData = ref({
     name: '',
     url: '',
     icon: '',
-    category: ''
+    category: '',
+    sortIndex: 0,
 })
 
 // 处理分类输入
@@ -164,7 +165,8 @@ watch(() => props.link, (newLink) => {
             name: '',
             url: '',
             icon: '',
-            category: ''
+            category: '',
+            sortIndex: 0,
         }
     }
 }, { immediate: true })

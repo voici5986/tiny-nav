@@ -3,6 +3,7 @@ export interface Link {
   url: string
   icon: string
   category: string
+  sortIndex: number
 }
 
 export interface LoginCredentials {
@@ -10,3 +11,8 @@ export interface LoginCredentials {
   password: string
 }
 
+export interface SortIndexUpdate {
+  index: number
+  sortIndex: number
+  category?: string
+}

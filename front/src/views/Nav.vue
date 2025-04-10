@@ -4,10 +4,10 @@
         <NavHeader v-model:editMode="editMode" @add="openAddDialog" @logout="handleLogout" />
 
         <div class="mx-auto max-w-7xl mt-8 p-3">
-            <div v-for="(_, category) in groupedLinks" :key="category" class="mb-8">
+            <div v-for="(_, category) in groupedLinksData" :key="category" class="mb-8">
                 <h2 class="text-xl font-bold mb-4">{{ category }}</h2>
-                <draggable v-model="groupedLinks[category]" group="categories" handle=".drag-handle"
-                    :itemKey="'globalIndex'" @end="onDragEnd"
+                <draggable v-model="groupedLinksData[category]" group="categories" handle=".drag-handle"
+                    :itemKey="'globalIndex'" @end="onDragEnd($event, category)"
                     class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                     <!-- 使用 item 插槽传递数据 -->
                     <template #item="{ element }">
@@ -48,12 +48,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMainStore } from '@/stores'
 import { api } from '@/api'
 import draggable from 'vuedraggable'
-import type { Link } from '@/api/types'
+import type { Link, SortIndexUpdate } from '@/api/types'
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/vue'
 import LinkCard from '@/components/LinkCard.vue'
 import LinkDialog from '@/components/LinkDialog.vue'
@@ -73,14 +73,16 @@ const newLink = ref<Link>({
     name: '',
     url: '',
     icon: '',
-    category: ''
+    category: '',
+    sortIndex: 0,
 })
 
 const updatedLink = ref<Link>({
     name: '',
     url: '',
     icon: '',
-    category: ''
+    category: '',
+    sortIndex: 0,
 })
 
 // 添加获取已存在分类的计算属性
@@ -94,8 +96,9 @@ const existingCategories = computed(() => {
     return Array.from(categories)
 })
 
-const groupedLinks = computed(() => {
-    // 添加安全检查，确保 links 是数组
+const groupedLinksData = ref<Record<string, (Link & { globalIndex: number })[]>>({})
+// 计算分组数据
+const updateGroupedLinksData = () => {
     const links = store.links || []
     const groups: Record<string, (Link & { globalIndex: number })[]> = {}
 
@@ -103,17 +106,36 @@ const groupedLinks = computed(() => {
         links.forEach((link, index) => {
             const linkWithIndex = {
                 ...link,
-                globalIndex: index
+                globalIndex: index,
+                sortIndex: link.sortIndex || 0
             }
             if (!groups[link.category]) {
                 groups[link.category] = []
             }
             groups[link.category].push(linkWithIndex)
         })
+
+        // 对每个分组进行排序
+        for (const category in groups) {
+            groups[category].sort((a, b) => {
+                if (a.sortIndex === 0 && b.sortIndex === 0) {
+                    return a.globalIndex - b.globalIndex
+                }
+                if (a.sortIndex === 0) return 1
+                if (b.sortIndex === 0) return -1
+                return a.sortIndex - b.sortIndex
+            })
+        }
     }
 
-    return groups
-})
+    groupedLinksData.value = groups
+}
+
+// 监听 store.links 的变化，更新分组数据
+watch(() => store.links, () => {
+    updateGroupedLinksData()
+}, { immediate: true })
+
 
 const fetchLinks = async () => {
     try {
@@ -136,7 +158,8 @@ const openAddDialog = () => {
         name: '',
         url: '',
         icon: '',
-        category: ''
+        category: '',
+        sortIndex: 0,
     }
     isAddDialogOpen.value = true
 }
@@ -196,20 +219,70 @@ const handleDelete = async () => {
     }
 }
 
-const onDragEnd = async (event: any) => {
-    // 检查是否有拖动操作
-    if (!event || !event.from || !event.to) {
-        console.warn("无有效拖动数据")
-        return;
+const onDragEnd = async (event: any, category: string) => {
+    console.log('Drag ended:', event)
+    // 如果没有实际的拖拽改变，直接返回
+    if (!event.added && !event.removed && (event.oldIndex === event.newIndex && event.from === event.to)) {
+        return
     }
 
-    // 获取拖动后的分类
-    const oldGlobalIndex = event.oldIndex
-    const newGlobalIndex = event.newIndex
-    console.log(oldGlobalIndex, newGlobalIndex)
+    // 存储所有需要更新的分类
+    const categoriesToUpdate = new Set<string>([category])
+    const toCategory = event.to.parentElement.querySelector('h2').textContent.trim()
 
-    // TODO:
-};
+    // 如果是跨分类拖拽，需要添加目标分类
+    if (event.from !== event.to) {
+        console.log('toCategory', toCategory)
+        categoriesToUpdate.add(toCategory)
+    }
+    console.log(categoriesToUpdate)
+
+    // 收集所有需要更新的链接
+    let updates: SortIndexUpdate[] = []
+
+    // 处理每个受影响的分类
+    for (const cat of categoriesToUpdate) {
+        const links = groupedLinksData.value[cat] || []
+        const dragLink = links[event.newIndex]
+        links.forEach((link, index) => {
+            const update: SortIndexUpdate = {
+                index: link.globalIndex,
+                sortIndex: index + 1
+            }
+
+            // 如果是跨分类拖拽，为目标分类添加新的category值
+            if (cat === toCategory && link.globalIndex === dragLink.globalIndex) {
+                update.category = toCategory
+            }
+
+            updates.push(update)
+        })
+    }
+
+    try {
+        // 调用更新排序的 API
+        await api.updateSortIndices(updates)
+
+        // 更新本地数据
+        store.links = store.links.map(link => {
+            const update = updates.find(u => u.index === store.links.indexOf(link))
+            if (update) {
+                return {
+                    ...link,
+                    sortIndex: update.sortIndex,
+                    // 如果有category更新，也要更新
+                    ...(update.category ? { category: update.category } : {})
+                }
+            }
+            return link
+        })
+    } catch (error) {
+        alert('更新排序失败')
+        console.error('Failed to update sort indices:', error)
+        // 发生错误时恢复原始数据
+        updateGroupedLinksData()
+    }
+}
 
 onMounted(() => {
     if (!store.token) {

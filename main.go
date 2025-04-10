@@ -402,8 +402,9 @@ func deleteLinkHandler(w http.ResponseWriter, r *http.Request) {
 
 type UpdateSortIndexRequest struct {
 	Updates []struct {
-		Index     int `json:"index"`     // 链接在数组中的索引
-		SortIndex int `json:"sortIndex"` // 新的排序索引值
+		Index     int    `json:"index"`              // 链接在数组中的索引
+		SortIndex int    `json:"sortIndex"`          // 新的排序索引值
+		Category  string `json:"category,omitempty"` // 可选的分类更新
 	} `json:"updates"`
 }
 
@@ -413,30 +414,37 @@ func updateSortIndicesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 解析请求体
 	var req UpdateSortIndexRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
 
-	// 加载当前导航数据
 	nav, err := loadNavigation()
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	// 批量更新 sortIndex
+	// 批量更新 sortIndex 和 category
+	needUpdaeCategories := false
 	for _, update := range req.Updates {
 		if update.Index < 0 || update.Index >= len(nav.Links) {
 			http.Error(w, fmt.Sprintf("Invalid index: %d", update.Index), http.StatusBadRequest)
 			return
 		}
 		nav.Links[update.Index].SortIndex = update.SortIndex
+		if update.Category != "" {
+			nav.Links[update.Index].Category = update.Category
+			needUpdaeCategories = true
+		}
 	}
 
-	// 保存更新后的导航数据
+	// 更新分类列表
+	if needUpdaeCategories {
+		updateCategories(&nav)
+	}
+
 	if err := saveNavigation(nav); err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

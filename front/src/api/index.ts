@@ -1,5 +1,5 @@
 import { useMainStore } from '@/stores'
-import type { Link, LoginCredentials } from './types'
+import type { Link, LoginCredentials, SortIndexUpdate } from './types'
 
 const apiBase = import.meta.env.VITE_API_BASE
 
@@ -94,5 +94,12 @@ export const api = {
   async getWebsiteIcon(url: string): Promise<string> {
     const { data } = await apiFetch<{ iconData: string }>(`/get-icon?url=${encodeURIComponent(url)}`)
     return data.iconData
+  },
+
+  async updateSortIndices(updates: SortIndexUpdate[]): Promise<void> {
+    await apiFetch('/navigation/sort', {
+      method: 'PUT',
+      body: JSON.stringify({ updates })
+    })
   }
 }
