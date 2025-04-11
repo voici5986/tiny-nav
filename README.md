@@ -1,22 +1,110 @@
 # 非常简单的个人导航网站
 
-使用 [豆包](https://www.doubao.com/) 和 [copilot](https://github.com/copilot) 开发。
+使用 [豆包](https://www.doubao.com/) 和 [copilot](https://github.com/copilot) 辅助开发。
 
-## 编译
+## 使用 Docker 运行
+
+### 用 Docker compose 启动
+
+新建 `docker-compose.yml` 文件，内容如下：
+
+```yml
+services:
+  xiaomusic:
+    image: hanxi/tiny-nav
+    container_name: tiny-nav
+    restart: unless-stopped
+    ports:
+      - 8080:58080
+    environment:
+      NAV_USERNAME: admin
+      NAV_PASSWORD: 123456
+    volumes:
+      - /tiny-nav-data:/app/data
+```
+
+国内镜像：
+
+```yml
+services:
+  xiaomusic:
+    image: docker.hanxi.cc/hanxi/tiny-nav
+    container_name: tiny-nav
+    restart: unless-stopped
+    ports:
+      - 8080:58080
+    environment:
+      NAV_USERNAME: admin
+      NAV_PASSWORD: 123456
+    volumes:
+      - /tiny-nav-data:/app/data
+```
+
+### 用 Docker 启动
+
+启动命令：
+
+```bash
+docker run -d \
+  --name tiny-nav \
+  -p 8080:58080 \
+  -e NAV_USERNAME=admin \
+  -e NAV_PASSWORD=123456 \
+  -v /tiny-nav-data:/app/data \
+  hanxi/tiny-nav
+```
+
+国内镜像启动：
+
+```bash
+docker run -d \
+  --name tiny-nav \
+  -p 8080:58080 \
+  -e NAV_USERNAME=admin \
+  -e NAV_PASSWORD=123456 \
+  -v /tiny-nav-data:/app/data \
+  docker.hanxi.cc/hanxi/tiny-nav
+```
+
+### 进入网站页面
+
+使用浏览器访问 <http://ip:8080> 即可, ip 改成你机器的ip。
+
+## 下载运行
+
+1. 下载对应平台的可执行文件
+2. 以无用户密码的方式运行
+
+```bash
+./tiny-nav --port=8099 --enable_no_auth
+```
+
+3. 打开浏览器访问 <http://localhost:8099> 即可。
+4. 以有用户密码的方式运行
+
+```bash
+./tiny-nav --port=8099 --user=admin --password=123456
+```
+
+## 编译运行
+
+### 编译
 
 ```
-go build
+sh build.sh
 ```
 
-## 启动
+这样会生成 `tiny-nav` 可执行文件。所有静态资源会被打包到 `tiny-nav` 可执行文件中。
+
+### 启动
 
 ```
-NAV_USERNAME=hanxi NAV_PASSWORD=hanxi LISTEN_PORT=8099 ./tiny-nav
+ENABLE_NO_AUTH=true LISTEN_PORT=8099 ./tiny-nav
 ```
 
 网页访问 <http://localhost:8099> 即可。
 
-## TODO
+## 技术栈
 
-- [ ] 优化页面显示效果
-- [ ] 弄个 Docker 环境
+- 后端 Golang
+- 前端 Vue
