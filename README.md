@@ -10,7 +10,7 @@
 
 ```yml
 services:
-  xiaomusic:
+  tiny-nav:
     image: hanxi/tiny-nav
     container_name: tiny-nav
     restart: unless-stopped
@@ -27,7 +27,7 @@ services:
 
 ```yml
 services:
-  xiaomusic:
+  tiny-nav:
     image: docker.hanxi.cc/hanxi/tiny-nav
     container_name: tiny-nav
     restart: unless-stopped
