@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"golang.org/x/net/html"
+	"gopkg.in/ini.v1"
 	"io"
 	"io/fs"
 	"log"
@@ -29,9 +30,15 @@ const (
 	dataDir            = "data"
 	tokenFileName      = "tokens.json"
 	navigationFileName = "navigation.json"
+	configFileName     = "config.ini"
 )
 
 var tokenStore *TokenStore
+
+var envPort string       // 监听端口
+var envUsername string   // 登录用户名
+var envPassword string   // 登录密码
+var envEnableNoAuth bool // 是否启用无用户密码模式
 
 type User struct {
 	Username string `json:"username"`
@@ -49,6 +56,48 @@ type Link struct {
 type Navigation struct {
 	Links      []Link   `json:"links"`
 	Categories []string `json:"categories"`
+}
+
+func loadConfig() {
+	// 确保 data 目录存在
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		fmt.Errorf("failed to create data directory: %v", err)
+	}
+
+	configPath := filepath.Join(dataDir, configFileName)
+
+	cfg, err := ini.Load(configPath)
+	if err != nil {
+		log.Printf("Failed to read config file: %v", err)
+	}
+
+	port := os.Getenv("LISTEN_PORT")
+	if port == "" && cfg != nil {
+		port = cfg.Section("").Key("LISTEN_PORT").MustString("58080")
+	}
+
+	username := os.Getenv("NAV_USERNAME")
+	if username == "" && cfg != nil {
+		username = cfg.Section("").Key("NAV_USERNAME").String()
+	}
+
+	password := os.Getenv("NAV_PASSWORD")
+	if password == "" && cfg != nil {
+		password = cfg.Section("").Key("NAV_PASSWORD").String()
+	}
+
+	noAuth := os.Getenv("ENABLE_NO_AUTH")
+	if cfg != nil {
+		noAuth = cfg.Section("").Key("ENABLE_NO_AUTH").MustString("false")
+	}
+
+	envPort = port
+	envUsername = username
+	envPassword = password
+	if noAuth == "true" {
+		envEnableNoAuth = true
+	}
+	log.Printf("Config loaded: LISTEN_PORT=%s, NAV_USERNAME=%s, ENABLE_NO_AUTH=%s", envPort, envUsername, noAuth)
 }
 
 func loadNavigation() (Navigation, error) {
@@ -272,21 +321,30 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
-	envUsername := os.Getenv("NAV_USERNAME")
-	envPassword := os.Getenv("NAV_PASSWORD")
-	if user.Username == envUsername && user.Password == envPassword {
-		// 生成新的令牌
-		token, err := generateToken()
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		tokenStore.AddToken(token, defaultExpireTime)
-		w.Header().Set("Authorization", token)
-		w.WriteHeader(http.StatusOK)
+
+	authCheck := false
+	if envEnableNoAuth {
+		log.Println("No authentication required (ENABLE_NO_AUTH=true)")
+		authCheck = true
 	} else {
+		if user.Username == envUsername && user.Password == envPassword {
+			authCheck = true
+		}
+	}
+	if !authCheck {
+
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	}
+
+	// 生成新的令牌
+	token, err := generateToken()
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	tokenStore.AddToken(token, defaultExpireTime)
+	w.Header().Set("Authorization", token)
+	w.WriteHeader(http.StatusOK)
 }
 
 // 中间件函数验证令牌
@@ -732,11 +790,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
-	port := os.Getenv("LISTEN_PORT")
-	if port == "" {
-		port = "8080"
-	}
-
+	loadConfig()
 	tokenStore = NewTokenStore()
 
 	mux := http.NewServeMux()
@@ -761,8 +815,8 @@ func main() {
 	// 使用 CORS 中间件和日志中间件
 	handler := corsMiddleware(logAccessMiddleware(mux))
 
-	log.Printf("Server is running on http://localhost:%s\n", port)
-	err = http.ListenAndServe(":"+port, handler)
+	log.Printf("Server is running on http://localhost:%s\n", envPort)
+	err = http.ListenAndServe(":"+envPort, handler)
 	if err != nil {
 		log.Fatal("Server failed to start: ", err)
 	}

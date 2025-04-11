@@ -48,6 +48,19 @@ const handleLogin = async () => {
     }
 }
 
+// 自动检测无用户密码模式
+const detectNoAuthMode = async () => {
+    try {
+        const token = await api.login({ username: '', password: '' }) // 尝试使用空账号密码登录
+        store.setToken(token) // 设置 Token
+        store.setNoAuthMode(true) // 设置无用户密码模式为 true
+        router.push('/nav') // 跳转到导航页面
+    } catch (error) {
+        console.log('No-auth mode not enabled or login failed:', error)
+        store.setNoAuthMode(false) // 设置无用户密码模式为 false
+    }
+}
+
 // 页面加载时自动验证 token
 onMounted(async () => {
     console.log(store.token)
@@ -62,5 +75,6 @@ onMounted(async () => {
             loading.value = false
         }
     }
+    await detectNoAuthMode() // 尝试无用户密码登录
 })
 </script>

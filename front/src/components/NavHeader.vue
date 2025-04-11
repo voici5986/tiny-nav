@@ -24,8 +24,8 @@
                     :title="isDarkTheme ? '浅色模式' : '深色模式'">
                     <div class="i-mdi-theme-light-dark text-gray-400"></div>
                 </button>
-                <button @click="$emit('logout')" class="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100"
-                    title="退出登录">
+                <button v-if="!isNoAuthMode" @click="$emit('logout')"
+                    class="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100" title="退出登录">
                     <div class="i-mdi-logout text-gray-400"></div>
                 </button>
             </div>
@@ -46,7 +46,8 @@
                     <div class="i-mdi-theme-light-dark text-gray-400"></div>
                     切换到{{ isDarkTheme ? '浅色模式' : '深色模式' }}
                 </button>
-                <button @click="$emit('logout')" class="flex items-center px-3 py-2 rounded-md hover:bg-gray-100">
+                <button v-if="!isNoAuthMode" @click="$emit('logout')"
+                    class="flex items-center px-3 py-2 rounded-md hover:bg-gray-100">
                     <div class="i-mdi-logout text-gray-400"></div>
                     退出登录
                 </button>
@@ -60,6 +61,7 @@ import { ref } from 'vue'
 
 const props = defineProps<{
     editMode: boolean
+    isNoAuthMode: boolean // 新增属性，表示是否启用无用户密码模式
 }>()
 
 const emit = defineEmits<{

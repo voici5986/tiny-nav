@@ -1,7 +1,8 @@
 <template>
     <AppLayout>
         <!-- 顶部操作栏 -->
-        <NavHeader v-model:editMode="editMode" @add="openAddDialog" @logout="handleLogout" />
+        <NavHeader v-model:editMode="editMode" @add="openAddDialog" @logout="handleLogout"
+            :isNoAuthMode="isNoAuthMode" />
 
         <div class="mx-auto max-w-7xl mt-8 p-3">
             <draggable v-model="categories" @end="onCategoryDragEnd" item-key="category" handle=".category-drag-handle">
@@ -349,6 +350,9 @@ const onCategoryDragEnd = async (event: any) => {
         updateGroupedLinksData()
     }
 }
+
+// 通过 Store 获取 isNoAuthMode
+const isNoAuthMode = computed(() => store.isNoAuthMode)
 
 onMounted(() => {
     if (!store.token) {

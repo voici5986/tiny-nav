@@ -6,6 +6,7 @@ interface State {
   token: string | null
   links: Link[]
   categories: string[]
+  isNoAuthMode: boolean
 }
 
 export const useMainStore = defineStore('main', {
@@ -13,6 +14,7 @@ export const useMainStore = defineStore('main', {
     token: null,
     links: [],
     categories: [],
+    isNoAuthMode: false,
   }),
 
   actions: {
@@ -24,6 +26,9 @@ export const useMainStore = defineStore('main', {
     },
     setCategories(categories: string[]) {
       this.categories = Array.isArray(categories) ? categories : []
+    },
+    setNoAuthMode(value: boolean) {
+      this.isNoAuthMode = value // 设置 isNoAuthMode 的值
     },
     logout() {
       this.token = null
