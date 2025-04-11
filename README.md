@@ -76,14 +76,14 @@ docker run -d \
 2. 以无用户密码的方式运行
 
 ```bash
-./tiny-nav --port=8099 --enable_no_auth
+./tiny-nav --port=58080 --no-auth
 ```
 
-3. 打开浏览器访问 <http://localhost:8099> 即可。
+3. 打开浏览器访问 <http://localhost:58080> 即可。
 4. 以有用户密码的方式运行
 
 ```bash
-./tiny-nav --port=8099 --user=admin --password=123456
+./tiny-nav --port=58080 --user=admin --password=123456
 ```
 
 ## 编译运行
@@ -99,10 +99,10 @@ sh build.sh
 ### 启动
 
 ```
-ENABLE_NO_AUTH=true LISTEN_PORT=8099 ./tiny-nav
+ENABLE_NO_AUTH=true LISTEN_PORT=58080 ./tiny-nav
 ```
 
-网页访问 <http://localhost:8099> 即可。
+网页访问 <http://localhost:58080> 即可。
 
 ## 技术栈
 

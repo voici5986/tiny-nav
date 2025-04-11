@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"golang.org/x/net/html"
 	"gopkg.in/ini.v1"
@@ -59,6 +60,13 @@ type Navigation struct {
 }
 
 func loadConfig() {
+	// Parse command line flags
+	port := flag.String("port", "", "Port to listen on (e.g. 58080)")
+	user := flag.String("user", "", "Username for authentication")
+	password := flag.String("password", "", "Password for authentication")
+	noAuth := flag.Bool("no-auth", false, "Enable no-auth mode")
+	flag.Parse()
+
 	// 确保 data 目录存在
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		fmt.Errorf("failed to create data directory: %v", err)
@@ -71,33 +79,47 @@ func loadConfig() {
 		log.Printf("Failed to read config file: %v", err)
 	}
 
-	port := os.Getenv("LISTEN_PORT")
-	if port == "" && cfg != nil {
-		port = cfg.Section("").Key("LISTEN_PORT").MustString("58080")
+	// Priority: Command line args > Environment variables > Config file
+	envPort = os.Getenv("LISTEN_PORT")
+	if envPort == "" {
+		if *port != "" {
+			envPort = *port
+		} else if cfg != nil {
+			envPort = cfg.Section("").Key("LISTEN_PORT").MustString("58080")
+		} else {
+			envPort = "58080"
+		}
 	}
 
-	username := os.Getenv("NAV_USERNAME")
-	if username == "" && cfg != nil {
-		username = cfg.Section("").Key("NAV_USERNAME").String()
+	envUsername = os.Getenv("NAV_USERNAME")
+	if envUsername == "" {
+		if *user != "" {
+			envUsername = *user
+		} else if cfg != nil {
+			envUsername = cfg.Section("").Key("NAV_USERNAME").String()
+		}
 	}
 
-	password := os.Getenv("NAV_PASSWORD")
-	if password == "" && cfg != nil {
-		password = cfg.Section("").Key("NAV_PASSWORD").String()
+	envPassword = os.Getenv("NAV_PASSWORD")
+	if envPassword == "" {
+		if *password != "" {
+			envPassword = *password
+		} else if cfg != nil {
+			envPassword = cfg.Section("").Key("NAV_PASSWORD").String()
+		}
 	}
 
-	noAuth := os.Getenv("ENABLE_NO_AUTH")
+	noAuthStr := os.Getenv("ENABLE_NO_AUTH")
 	if cfg != nil {
-		noAuth = cfg.Section("").Key("ENABLE_NO_AUTH").MustString("false")
+		noAuthStr = cfg.Section("").Key("ENABLE_NO_AUTH").MustString("false")
+	}
+	if *noAuth {
+		envEnableNoAuth = true
+	} else {
+		envEnableNoAuth = noAuthStr == "true"
 	}
 
-	envPort = port
-	envUsername = username
-	envPassword = password
-	if noAuth == "true" {
-		envEnableNoAuth = true
-	}
-	log.Printf("Config loaded: LISTEN_PORT=%s, NAV_USERNAME=%s, ENABLE_NO_AUTH=%s", envPort, envUsername, noAuth)
+	log.Printf("Config loaded: LISTEN_PORT=%s, NAV_USERNAME=%s, ENABLE_NO_AUTH=%v", envPort, envUsername, envEnableNoAuth)
 }
 
 func loadNavigation() (Navigation, error) {
@@ -790,6 +812,16 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
+	// Add a simple usage message
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s [options]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Options:\n")
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nExample:\n")
+		fmt.Fprintf(os.Stderr, "  %s --port=58080 --user=admin --password=123456\n", os.Args[0])
+	}
+
 	loadConfig()
 	tokenStore = NewTokenStore()
 
