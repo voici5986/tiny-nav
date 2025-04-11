@@ -72,7 +72,7 @@ docker run -d \
 
 ## 下载运行
 
-1. 下载对应平台的可执行文件
+1. 去 <https://github.com/hanxi/tiny-nav/releases> 下载对应平台的可执行文件
 2. 以无用户密码的方式运行
 
 ```bash
