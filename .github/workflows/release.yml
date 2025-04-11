@@ -63,13 +63,18 @@ jobs:
       - name: Package artifacts
         run: |
           mkdir -p release
-          tar -czf release/tiny-nav-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm }}.tar.gz tiny-nav${{ matrix.suffix }} LICENSE README.md
+          # 只打包可执行文件
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
+            zip -j release/tiny-nav-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm }}.zip tiny-nav${{ matrix.suffix }}
+          else
+            tar -czf release/tiny-nav-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm }}.tar.gz tiny-nav${{ matrix.suffix }}
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            release/tiny-nav-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm }}.tar.gz
+            release/tiny-nav-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm }}.*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
