@@ -22,8 +22,10 @@ COPY . .
 # Copy built frontend files
 COPY --from=frontend-builder /app/public ./public
 
+#ENV HTTP_PROXY=http://192.168.3.102:8080
+#ENV HTTPS_PROXY=http://192.168.3.102:8080
 # Build backend
-RUN go build -o tiny-nav
+RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o tiny-nav
 
 # Stage 3: Final Image
 FROM alpine:latest
@@ -36,7 +38,6 @@ WORKDIR /app
 
 # Copy built binary and frontend files
 COPY --from=backend-builder /app/tiny-nav .
-RUN chmod +x tiny-nav
 
 # Expose port
 EXPOSE 58080
