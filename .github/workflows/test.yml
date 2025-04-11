@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        # Define the target platforms
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: linux
+            goarch: arm
+            goarm: 7
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+            suffix: .exe
+          - goos: windows
+            goarch: arm64
+            suffix: .exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build frontend
+        working-directory: ./front
+        run: |
+          npm install
+          npm run build
+
+      - name: Build backend
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+        run: |
+          CGO_ENABLED=0 go build -o tiny-nav${{ matrix.suffix }}
+
+      - name: Package artifacts
+        run: |
+          mkdir -p release
+          # 只打包可执行文件
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
+            zip -j release/tiny-nav-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm }}.zip tiny-nav${{ matrix.suffix }}
+          else
+            tar -czf release/tiny-nav-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm }}.tar.gz tiny-nav${{ matrix.suffix }}
+          fi
+
