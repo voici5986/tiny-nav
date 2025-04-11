@@ -36,6 +36,7 @@ WORKDIR /app
 
 # Copy built binary and frontend files
 COPY --from=backend-builder /app/tiny-nav .
+RUN chmod +x tiny-nav
 
 # Expose port
 EXPOSE 58080
