@@ -2,6 +2,9 @@
 
 使用 [豆包](https://www.doubao.com/) 和 [copilot](https://github.com/copilot) 辅助开发。
 
+- 体验地址： <https://nav.hanxi.cc/>
+- 不需要账号密码，请不要删东西。
+
 ## 使用 Docker 运行
 
 ### 用 Docker compose 启动
