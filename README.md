@@ -1,5 +1,7 @@
 # 非常简单的个人导航网站
 
+🔥 致力于成为你的 NAS 服务入口❗
+
 使用 [豆包](https://www.doubao.com/) 和 [copilot](https://github.com/copilot) 辅助开发。
 
 - 体验地址： <https://nav.hanxi.cc/>
