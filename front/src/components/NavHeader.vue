@@ -10,7 +10,7 @@
             <!-- 右侧菜单按钮 -->
             <div class="flex items-center gap-2">
                 <button @click="toggleMobileMenu"
-                    class="md:hidden p-2 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700">
+                    class="md:hidden p-2 w-10 h-10 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700">
                     <div :class="[isMobileMenuOpen ? 'i-mdi-close text-red-500' : 'i-mdi-menu text-gray-500 dark:text-gray-300']"
                         class="text-2xl"></div>
                 </button>
