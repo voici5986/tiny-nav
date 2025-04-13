@@ -3,3 +3,4 @@ tiny-nav
 cache/
 dist/
 /public/
+/data/

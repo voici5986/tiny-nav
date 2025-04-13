@@ -2,7 +2,7 @@
     <div class="relative group">
         <!-- 整个卡片作为可点击区域 -->
         <a :href="link.url" target="_blank" rel="noopener noreferrer"
-            class="block p-4 bg-white rounded-lg shadow-md hover:shadow-lg transition-all">
+            class="block p-4 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg shadow-md hover:shadow-lg transition-all">
             <div class="flex flex-col items-center">
                 <div class="mb-2 w-12 h-12">
                     <!-- SVG 代码 -->
@@ -13,8 +13,9 @@
                         @error="onImageError" />
                 </div>
 
-                <div class="w-full px-2"> <!-- 添加容器控制宽度 -->
-                    <span class="text-blue-500 text-center mt-2 text-sm block truncate" :title="link.name">
+                <div class="w-full px-2">
+                    <span class="text-blue-500 dark:text-blue-400 text-center mt-2 text-sm block truncate"
+                        :title="link.name">
                         {{ link.name }}
                     </span>
                 </div>
@@ -26,14 +27,14 @@
             class="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 opacity-50 duration-200">
             <!-- 修改按钮 -->
             <button @click.prevent="$emit('update', link.globalIndex)"
-                class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-yellow-500 bg-white rounded-full shadow-md transition-all hover:scale-110"
+                class="w-8 h-8 flex items-center justify-center text-gray-400 dark:text-gray-300 hover:text-yellow-500 dark:hover:text-yellow-400 bg-white dark:bg-gray-800 rounded-full shadow-md transition-all hover:scale-110"
                 title="修改">
                 <div class="i-mdi-pencil text-xl"></div>
             </button>
 
             <!-- 拖动图标 -->
             <button
-                class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-blue-500 rounded-full shadow-md transition-all hover:scale-110 drag-handle"
+                class="w-8 h-8 flex items-center justify-center text-gray-400 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 rounded-full shadow-md transition-all hover:scale-110 drag-handle"
                 title="拖动">
                 <div class="i-mdi-drag text-xl"></div>
             </button>
@@ -41,7 +42,7 @@
 
             <!-- 删除按钮 -->
             <button @click.prevent="$emit('delete', link.globalIndex)"
-                class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 bg-white rounded-full shadow-md transition-all hover:scale-110"
+                class="w-8 h-8 flex items-center justify-center text-gray-400 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 bg-white dark:bg-gray-800 rounded-full shadow-md transition-all hover:scale-110"
                 title="删除">
                 <div class="i-mdi-delete text-xl"></div>
             </button>
