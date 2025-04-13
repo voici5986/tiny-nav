@@ -92,7 +92,7 @@
                 <!-- 按钮组 -->
                 <div class="flex justify-end space-x-4 mt-6">
                     <button type="button" @click="$emit('update:show', false)"
-                        class="px-4 py-2 text-gray-600 dark:text-gray-300 rounded-md hover:text-gray-800 dark:hover:text-gray-100 focus:outline-none">
+                        class="px-4 py-2 rounded-md focus:outline-none bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700">
                         取消
                     </button>
                     <button type="submit"
