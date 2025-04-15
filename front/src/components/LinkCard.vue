@@ -7,9 +7,9 @@
                 <div class="mb-2 w-12 h-12">
                     <!-- SVG 代码 -->
                     <div v-if="isSvgContent(link.icon)" v-html="link.icon"
-                        class="w-full h-full flex items-center justify-center"></div>
+                        class="w-full h-full flex items-center justify-center dark:invert"></div>
                     <!-- 图片 URL -->
-                    <img v-else :src="getIconUrl(link.icon)" :alt="link.name" class="w-full h-full object-contain"
+                    <img v-else :src="getIconUrl(link.icon)" :alt="link.name" class="w-full h-full object-contain color-rotate dark:invert"
                         @error="onImageError" />
                 </div>
 
