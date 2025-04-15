@@ -659,13 +659,39 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	iconURL := fmt.Sprintf("%s://%s/favicon.ico", parsedURL.Scheme, parsedURL.Host)
-	resp, err := http.Get(iconURL)
-	log.Printf("Fetching icon from URL:%s", iconURL)
-	if err != nil || resp.StatusCode != http.StatusOK ||
-		resp.Header.Get("Content-Type") != "image/x-icon" ||
-		resp.Header.Get("Content-Type") != "image/vnd.microsoft.icon" {
+	// Create HTTP client and request
+	tr := &http.Transport{
+		TLSHandshakeTimeout: 10 * time.Second,
+		DisableKeepAlives:   true,
+		ForceAttemptHTTP2:   true,
+	}
+	client := &http.Client{Transport: tr}
+	req, err := http.NewRequest("GET", iconURL, nil)
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return
+	}
 
-		log.Printf("Try fetching icon from HTML URL:%s code:%d Content-Type:%s", iconURL, resp.StatusCode, resp.Header.Get("Content-Type"))
+	// Set headers to mimic Chrome
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+
+	// Perform the HTTP GET request
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Error performing GET request:%+v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	finalURL := resp.Request.URL.String() // 获取跳转后的真实 URL
+	log.Printf("Fetched icon from: %s", finalURL)
+
+	contentType := resp.Header.Get("Content-Type")
+	if resp.StatusCode != http.StatusOK || !strings.HasPrefix(contentType, "image/") {
+		// fallback：从 HTML 中获取图标
+		log.Printf("Fallback to HTML icon parsing, code:%d Content-Type:%s", resp.StatusCode, contentType)
 		// 尝试解析 HTML 来获取图标
 		iconURL, err = fetchIconFromHTML(urlParam)
 		if err != nil {
@@ -673,15 +699,23 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Failed to fetch icon", http.StatusInternalServerError)
 			return
 		}
-		log.Printf("Fetching icon from html URL:%s", iconURL)
-		resp, err = http.Get(iconURL)
+
+		log.Printf("Fetching icon from HTML URL: %s", iconURL)
+		req, _ = http.NewRequest("GET", iconURL, nil)
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0...)")
+		req.Header.Set("Accept", "image/*,*/*;q=0.8")
+		resp, err = client.Do(req)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			log.Printf("Failed to fetch icon from HTML: %v", err)
 			http.Error(w, "Failed to fetch icon", http.StatusInternalServerError)
 			return
 		}
+		defer resp.Body.Close()
+		contentType = resp.Header.Get("Content-Type")
+		if contentType == "" {
+			contentType = "image/x-icon"
+		}
 	}
-	defer resp.Body.Close()
 
 	// 读取图标数据
 	iconData, err := io.ReadAll(resp.Body)
@@ -693,12 +727,6 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 将图标数据转换为base64编码
 	base64Data := base64.StdEncoding.EncodeToString(iconData)
-
-	// 获取Content-Type
-	contentType := resp.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "image/x-icon" // 默认Content-Type
-	}
 
 	// 返回base64编码的图标数据
 	iconResponse := map[string]string{
