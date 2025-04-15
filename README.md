@@ -1,17 +1,23 @@
-# 非常简单的个人导航网站
+# TinyNav · 非常简单的个人导航网站
 
-使用 [豆包](https://www.doubao.com/) 和 [copilot](https://github.com/copilot) 辅助开发。
+[![GitHub Stars](https://img.shields.io/github/stars/hanxi/tiny-nav?style=flat-square)](https://github.com/hanxi/tiny-nav/stargazers)
+[![Docker Pulls](https://img.shields.io/docker/pulls/hanxi/tiny-nav?style=flat-square)](https://hub.docker.com/r/hanxi/tiny-nav)
+[![Docker Image Size](https://img.shields.io/docker/image-size/hanxi/tiny-nav?style=flat-square)](https://hub.docker.com/r/hanxi/tiny-nav)
 
-- 体验地址： <https://nav.hanxi.cc/>
-- 不需要账号密码，请不要删东西。
+> ✨ 一款极简、自托管的个人导航网站，基于 Go + Vue 开发。
 
-## 使用 Docker 运行
+**在线体验地址** 👉 [https://nav.hanxi.cc](https://nav.hanxi.cc)  
+无需账号密码即可访问，请勿修改或删除公共数据 🙏
 
-### 用 Docker compose 启动
+---
 
-新建 `docker-compose.yml` 文件，内容如下：
+## 🐳 使用 Docker 快速部署
 
-```yml
+### 使用 Docker Compose
+
+#### 国际镜像：
+
+```yaml
 services:
   tiny-nav:
     image: hanxi/tiny-nav
@@ -26,9 +32,9 @@ services:
       - /tiny-nav-data:/app/data
 ```
 
-国内镜像：
+#### 国内镜像：
 
-```yml
+```yaml
 services:
   tiny-nav:
     image: docker.hanxi.cc/hanxi/tiny-nav
@@ -43,9 +49,15 @@ services:
       - /tiny-nav-data:/app/data
 ```
 
-### 用 Docker 启动
-
 启动命令：
+
+```bash
+docker compose up -d
+```
+
+### 使用 Docker 运行
+
+#### 国际镜像：
 
 ```bash
 docker run -d \
@@ -57,7 +69,7 @@ docker run -d \
   hanxi/tiny-nav
 ```
 
-国内镜像启动：
+### 国内镜像：
 
 ```bash
 docker run -d \
@@ -69,53 +81,45 @@ docker run -d \
   docker.hanxi.cc/hanxi/tiny-nav
 ```
 
-### 进入网站页面
+访问页面：打开浏览器访问 http://<你的IP>:8080
 
-使用浏览器访问 <http://ip:8080> 即可, ip 改成你机器的ip。
+## 🧩 本地运行（非 Docker）
 
-## 下载运行
-
-1. 去 <https://github.com/hanxi/tiny-nav/releases> 下载对应平台的可执行文件
-2. 以无用户密码的方式运行
-
+1. 前往 Releases 页面 下载对应平台的可执行文件
+2. 无认证启动：
 ```bash
 ./tiny-nav --port=58080 --no-auth
 ```
-
-3. 打开浏览器访问 <http://localhost:58080> 即可。
-4. 以有用户密码的方式运行
-
+3. 有账号密码启动：
 ```bash
 ./tiny-nav --port=58080 --user=admin --password=123456
-```
+````
+4. 访问地址：http://localhost:58080
 
-## 编译运行
+## 🔧 从源码编译
 
-### 编译
-
-```
+```bash
 sh build.sh
 ```
 
-这样会生成 `tiny-nav` 可执行文件。所有静态资源会被打包到 `tiny-nav` 可执行文件中。
+将生成 tiny-nav 可执行文件，所有前端资源已打包至其中。运行示例：
 
-### 启动
-
-```
+```bash
 ENABLE_NO_AUTH=true LISTEN_PORT=58080 ./tiny-nav
 ```
 
-网页访问 <http://localhost:58080> 即可。
+访问：http://localhost:58080
 
-## 技术栈
+## 🧱 技术栈
 
-- 后端 Golang
-- 前端 Vue
+- 后端：Golang
+- 前端：Vue 3
 
-## 未来开发计划
+## 📌 开发计划
 
-- [ ] 查看模式：编辑需要账号密码，查看可以不用账号密码。
-- [ ] 对比数据 md5 值，没变化则使用本地数据。
-- [ ] 自动深色模式。
-- [ ] 书签导入。
-- [ ] 支持搜索。
+- [ ] 支持只读模式：查看免登录，编辑需登录
+- [ ] 数据 MD5 对比，避免重复加载
+- [ ] 自动深色模式
+- [ ] 支持书签导入
+- [ ] 支持站内搜索
+
