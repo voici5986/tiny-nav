@@ -118,3 +118,4 @@ ENABLE_NO_AUTH=true LISTEN_PORT=58080 ./tiny-nav
 - [ ] 对比数据 md5 值，没变化则使用本地数据。
 - [ ] 自动深色模式。
 - [ ] 书签导入。
+- [ ] 支持搜索。
