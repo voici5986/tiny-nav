@@ -101,6 +101,8 @@ import { useThemeStore } from '@/stores/themeStore'
 import { useMainStore } from '@/stores'
 
 const themeStore = useThemeStore()
+themeStore.applyTheme()
+
 const store = useMainStore()
 
 const props = defineProps<{

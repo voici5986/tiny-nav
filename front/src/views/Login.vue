@@ -43,6 +43,8 @@ import AppLayout from '@/components/AppLayout.vue'
 import { api } from '@/api'
 
 const themeStore = useThemeStore()
+themeStore.applyTheme()
+
 const router = useRouter()
 const store = useMainStore()
 const loading = ref(false)
