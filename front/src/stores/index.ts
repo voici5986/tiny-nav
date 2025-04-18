@@ -15,7 +15,7 @@ export const useMainStore = defineStore('main', {
     token: null,
     links: [],
     categories: [],
-    lastModified: 0,
+    lastModified: -1,
     config: {
       enableNoAuth: false,
       enableNoAuthView: false,
@@ -37,6 +37,8 @@ export const useMainStore = defineStore('main', {
     logout() {
       this.token = null
       this.links = []
+      this.categories = []
+      this.lastModified = -1
     },
     // 验证 token 是否有效
     async validateToken(): Promise<boolean> {
