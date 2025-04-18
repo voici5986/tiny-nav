@@ -6,16 +6,30 @@
 
 > ✨ 一款极简、自托管的个人导航网站，基于 Go + Vue 开发。
 
-**在线体验地址** 👉 [https://nav.hanxi.cc](https://nav.hanxi.cc)  
-无需账号密码即可访问，请勿修改或删除公共数据 🙏
+**在线体验地址** 👉 [https://nav.hanxi.cc](https://nav.hanxi.cc)
+
+- 账号: admin
+- 密码: 123456
+
+> [!IMPORTANT]
+> 请勿修改或删除数据 🙏
 
 ---
+
+## 支持功能
+
+- 拖拽排序
+- 夜间模式
+- 适配桌面端和移动端
+- 拉取网站图标或自定义svg图标
+- 无账号密码模式: 不需要账号密码即可编辑
+- 无账号密码浏览模式: 不需要账号密码可浏览，需要账号密码才能编辑
 
 ## 🐳 使用 Docker 快速部署
 
 ### 使用 Docker Compose
 
-#### 国际镜像：
+#### 国际镜像
 
 ```yaml
 services:
@@ -32,7 +46,7 @@ services:
       - /tiny-nav-data:/app/data
 ```
 
-#### 国内镜像：
+#### 国内镜像
 
 ```yaml
 services:
@@ -57,7 +71,7 @@ docker compose up -d
 
 ### 使用 Docker 运行
 
-#### 国际镜像：
+#### 国际镜像
 
 ```bash
 docker run -d \
@@ -69,7 +83,7 @@ docker run -d \
   hanxi/tiny-nav
 ```
 
-### 国内镜像：
+### 国内镜像
 
 ```bash
 docker run -d \
@@ -87,14 +101,18 @@ docker run -d \
 
 1. 前往 Releases 页面 下载对应平台的可执行文件
 2. 无认证启动：
+
 ```bash
 ./tiny-nav --port=58080 --no-auth
 ```
+
 3. 有账号密码启动：
+
 ```bash
 ./tiny-nav --port=58080 --user=admin --password=123456
 ````
-4. 访问地址：http://localhost:58080
+
+4. 访问地址：<http://localhost:58080>
 
 ## 🔧 从源码编译
 
@@ -108,7 +126,7 @@ sh build.sh
 ENABLE_NO_AUTH=true LISTEN_PORT=58080 ./tiny-nav
 ```
 
-访问：http://localhost:58080
+访问：<http://localhost:58080>
 
 ## 🧱 技术栈
 
@@ -117,9 +135,8 @@ ENABLE_NO_AUTH=true LISTEN_PORT=58080 ./tiny-nav
 
 ## 📌 开发计划
 
-- [ ] 支持只读模式：查看免登录，编辑需登录
+- [x] 支持只读模式：查看免登录，编辑需登录
 - [ ] 数据 MD5 对比，避免重复加载
 - [ ] 自动深色模式
 - [ ] 支持书签导入
 - [ ] 支持站内搜索
-

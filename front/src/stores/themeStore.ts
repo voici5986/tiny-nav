@@ -13,4 +13,7 @@ export const useThemeStore = defineStore('theme', () => {
     isDarkTheme,
     toggleTheme,
   }
+}, {
+  persist: true
 })
+

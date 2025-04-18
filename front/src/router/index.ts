@@ -5,12 +5,12 @@ const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/',
+      path: '/login',
       name: 'login',
       component: () => import('@/views/Login.vue')
     },
     {
-      path: '/nav',
+      path: '/',
       name: 'nav',
       component: () => import('@/views/Nav.vue'),
       meta: { requiresAuth: true }
@@ -19,25 +19,26 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, _) => {
-  const store = useMainStore()
-
   // 如果路由需要认证
   if (to.meta.requiresAuth) {
-    // 验证 token
-    const isValid = await store.validateToken()
-
-    if (!isValid) {
-      // token 无效，重定向到登录页
-      return { name: 'login' }
+    const store = useMainStore()
+    let needAuth = true
+    if (to.name === 'nav') {
+      const config = store.config
+      if (config.enableNoAuth || config.enableNoAuthView) {
+        needAuth = false
+      }
     }
-  } else if (to.name === 'login') {
-    // 如果要去登录页，先检查是否有有效token
-    const isValid = await store.validateToken()
+    if (needAuth) {
+      // 验证 token
+      const isValid = await store.validateToken()
 
-    if (isValid) {
-      // 如果 token 有效，直接跳转到导航页
-      return { name: 'nav' }
+      if (!isValid) {
+        // token 无效，重定向到登录页
+        return { name: 'login' }
+      }
     }
+    console.log('需要认证的路由:', to.name)
   }
 })
 

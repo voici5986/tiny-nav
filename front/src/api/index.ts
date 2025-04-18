@@ -1,5 +1,5 @@
 import { useMainStore } from '@/stores'
-import type { Link, LoginCredentials, SortIndexUpdate } from './types'
+import type { Link, LoginCredentials, SortIndexUpdate, Config } from './types'
 
 const apiBase = import.meta.env.VITE_API_BASE
 
@@ -108,5 +108,15 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ categories })
     })
-  }
+  },
+
+  async getConfig(): Promise<Config> {
+    const { data } = await apiFetch<Config>('/config')
+    return data
+  },
+
+  async validateToken(): Promise<{ status: string }> {
+    const { data } = await apiFetch<{ status: string }>('/validate')
+    return data
+  },
 }

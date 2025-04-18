@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
-import type { Link } from '@/api/types'
+import type { Link, Config } from '@/api/types'
 import { api } from '@/api'
 
 interface State {
   token: string | null
   links: Link[]
   categories: string[]
-  isNoAuthMode: boolean
+  config: Config
 }
 
 export const useMainStore = defineStore('main', {
@@ -14,7 +14,10 @@ export const useMainStore = defineStore('main', {
     token: null,
     links: [],
     categories: [],
-    isNoAuthMode: false,
+    config: {
+      enableNoAuth: false,
+      enableNoAuthView: false,
+    },
   }),
 
   actions: {
@@ -27,8 +30,13 @@ export const useMainStore = defineStore('main', {
     setCategories(categories: string[]) {
       this.categories = Array.isArray(categories) ? categories : []
     },
-    setNoAuthMode(value: boolean) {
-      this.isNoAuthMode = value // 设置 isNoAuthMode 的值
+    async fetchConfig(): Promise<Config> {
+      try {
+        this.config = await api.getConfig()
+      } catch (error) {
+        console.error('获取配置失败:', error)
+      }
+      return this.config
     },
     logout() {
       this.token = null
@@ -39,8 +47,7 @@ export const useMainStore = defineStore('main', {
       if (!this.token) return false
 
       try {
-        // 使用 getNavigation 接口来验证 token
-        await api.getNavigation()
+        await api.validateToken()
         return true
       } catch (error) {
         // 如果token无效，清除存储的token

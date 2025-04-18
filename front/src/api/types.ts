@@ -16,3 +16,8 @@ export interface SortIndexUpdate {
   sortIndex: number
   category?: string
 }
+
+export interface Config {
+  enableNoAuth: boolean
+  enableNoAuthView: boolean
+}

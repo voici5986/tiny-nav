@@ -36,10 +36,11 @@ const (
 
 var tokenStore *TokenStore
 
-var envPort string       // 监听端口
-var envUsername string   // 登录用户名
-var envPassword string   // 登录密码
-var envEnableNoAuth bool // 是否启用无用户密码模式
+var envPort string           // 监听端口
+var envUsername string       // 登录用户名
+var envPassword string       // 登录密码
+var envEnableNoAuth bool     // 是否启用无用户密码模式
+var envEnableNoAuthView bool // 是否启用无用户密码浏览模式
 
 type User struct {
 	Username string `json:"username"`
@@ -59,12 +60,18 @@ type Navigation struct {
 	Categories []string `json:"categories"`
 }
 
+type Config struct {
+	EnableNoAuth     bool `json:"enableNoAuth"`
+	EnableNoAuthView bool `json:"enableNoAuthView"`
+}
+
 func loadConfig() {
 	// Parse command line flags
 	port := flag.String("port", "", "Port to listen on (e.g. 58080)")
 	user := flag.String("user", "", "Username for authentication")
 	password := flag.String("password", "", "Password for authentication")
 	noAuth := flag.Bool("no-auth", false, "Enable no-auth mode")
+	noAuthView := flag.Bool("no-auth-view", false, "Enable no-auth-view mode")
 	flag.Parse()
 
 	// 确保 data 目录存在
@@ -119,7 +126,17 @@ func loadConfig() {
 		envEnableNoAuth = noAuthStr == "true"
 	}
 
-	log.Printf("Config loaded: LISTEN_PORT=%s, NAV_USERNAME=%s, ENABLE_NO_AUTH=%v", envPort, envUsername, envEnableNoAuth)
+	noAuthViewStr := os.Getenv("ENABLE_NO_AUTH_VIEW")
+	if cfg != nil {
+		noAuthViewStr = cfg.Section("").Key("ENABLE_NO_AUTH_VIEW").MustString("false")
+	}
+	if *noAuthView {
+		envEnableNoAuthView = true
+	} else {
+		envEnableNoAuthView = noAuthViewStr == "true"
+	}
+
+	log.Printf("Config loaded: LISTEN_PORT=%s, NAV_USERNAME=%s, ENABLE_NO_AUTH=%v, ENABLE_NO_AUTH_VIEW=%v", envPort, envUsername, envEnableNoAuth, envEnableNoAuthView)
 }
 
 func loadNavigation() (Navigation, error) {
@@ -381,6 +398,20 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func getConfigHandler(w http.ResponseWriter, r *http.Request) {
+	config := Config{
+		EnableNoAuth:     envEnableNoAuth,
+		EnableNoAuthView: envEnableNoAuthView,
+	}
+	data, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
+}
+
 func getNavigationHandler(w http.ResponseWriter, r *http.Request) {
 	nav, err := loadNavigation()
 	if err != nil {
@@ -394,6 +425,12 @@ func getNavigationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
+}
+
+func validateTokenHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
 }
 
 func addLinkHandler(w http.ResponseWriter, r *http.Request) {
@@ -855,7 +892,11 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", loginHandler)
-	mux.HandleFunc("/navigation", authMiddleware(getNavigationHandler))
+	if envEnableNoAuthView {
+		mux.HandleFunc("/navigation", getNavigationHandler)
+	} else {
+		mux.HandleFunc("/navigation", authMiddleware(getNavigationHandler))
+	}
 	mux.HandleFunc("/navigation/add", authMiddleware(addLinkHandler))
 	mux.HandleFunc("/navigation/update/", authMiddleware(updateLinkHandler))
 	mux.HandleFunc("/navigation/delete/", authMiddleware(deleteLinkHandler))
@@ -863,6 +904,8 @@ func main() {
 	mux.HandleFunc("/navigation/categories", authMiddleware(updateCategoriesHandler))
 	mux.HandleFunc("/debug/tokens", debugTokensHandler)
 	mux.HandleFunc("/get-icon", authMiddleware(getIconHandler))
+	mux.HandleFunc("/config", getConfigHandler)
+	mux.HandleFunc("/validate", authMiddleware(validateTokenHandler))
 
 	// 静态文件
 	staticFiles, err := fs.Sub(embeddedFiles, "public")
