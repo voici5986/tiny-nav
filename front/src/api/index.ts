@@ -66,8 +66,13 @@ export const api = {
     return token
   },
 
-  async getNavigation(): Promise<{ links: Link[], categories: string[] }> {
-    const { data } = await apiFetch<{ links: Link[], categories: string[] }>('/navigation')
+  async getNavigation(): Promise<{ links: Link[], categories: string[], lastModified: number }> {
+    const { data } = await apiFetch<{ links: Link[], categories: string[], lastModified: number }>('/navigation')
+    return data
+  },
+
+  async getLastModified(): Promise<{ lastModified: number }> {
+    const { data } = await apiFetch<{ lastModified: number }>('/navigation/last-modified')
     return data
   },
 

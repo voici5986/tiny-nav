@@ -186,10 +186,8 @@ watch(() => store.categories, () => {
 
 const fetchLinks = async () => {
     try {
-        const { links, categories } = await api.getNavigation()
+        const { links, categories } = await store.getNavigation()
         console.log(links, categories)
-        store.setLinks(links)
-        store.setCategories(categories)
     } catch (error) {
         alert('获取链接失败')
         router.push('/')

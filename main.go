@@ -56,8 +56,13 @@ type Link struct {
 }
 
 type Navigation struct {
-	Links      []Link   `json:"links"`
-	Categories []string `json:"categories"`
+	Links        []Link   `json:"links"`
+	Categories   []string `json:"categories"`
+	LastModified int64    `json:"lastModified"`
+}
+
+type NavigationLastModified struct {
+	LastModified int64 `json:"lastModified"`
 }
 
 type Config struct {
@@ -166,6 +171,10 @@ func saveNavigation(nav Navigation) error {
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		return fmt.Errorf("failed to create data directory: %v", err)
 	}
+
+	currentTime := time.Now()
+	lastModified := currentTime.UnixNano() / int64(time.Millisecond)
+	nav.LastModified = lastModified
 
 	data, err := json.MarshalIndent(nav, "", "  ")
 	if err != nil {
@@ -419,6 +428,25 @@ func getNavigationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data, err := json.MarshalIndent(nav, "", "  ")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
+}
+
+func getNavigationLastModifiedHandler(w http.ResponseWriter, r *http.Request) {
+	nav, err := loadNavigation()
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	response := NavigationLastModified{
+		LastModified: nav.LastModified,
+	}
+	data, err := json.MarshalIndent(response, "", "  ")
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -894,8 +922,10 @@ func main() {
 	mux.HandleFunc("/login", loginHandler)
 	if envEnableNoAuthView {
 		mux.HandleFunc("/navigation", getNavigationHandler)
+		mux.HandleFunc("/navigation/last-modified", getNavigationLastModifiedHandler)
 	} else {
 		mux.HandleFunc("/navigation", authMiddleware(getNavigationHandler))
+		mux.HandleFunc("/navigation/last-modified", authMiddleware(getNavigationLastModifiedHandler))
 	}
 	mux.HandleFunc("/navigation/add", authMiddleware(addLinkHandler))
 	mux.HandleFunc("/navigation/update/", authMiddleware(updateLinkHandler))

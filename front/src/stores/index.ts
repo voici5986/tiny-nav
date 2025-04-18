@@ -6,6 +6,7 @@ interface State {
   token: string | null
   links: Link[]
   categories: string[]
+  lastModified: number
   config: Config
 }
 
@@ -14,6 +15,7 @@ export const useMainStore = defineStore('main', {
     token: null,
     links: [],
     categories: [],
+    lastModified: 0,
     config: {
       enableNoAuth: false,
       enableNoAuthView: false,
@@ -23,12 +25,6 @@ export const useMainStore = defineStore('main', {
   actions: {
     setToken(token: string | null) {
       this.token = token
-    },
-    setLinks(links: Link[]) {
-      this.links = Array.isArray(links) ? links : []
-    },
-    setCategories(categories: string[]) {
-      this.categories = Array.isArray(categories) ? categories : []
     },
     async fetchConfig(): Promise<Config> {
       try {
@@ -54,7 +50,21 @@ export const useMainStore = defineStore('main', {
         this.logout()
         return false
       }
-    }
+    },
+    async getNavigation(): Promise<{ links: Link[], categories: string[] }> {
+      const lastModifiedResponse: { lastModified: number } = await api.getLastModified()
+      if (this.lastModified === lastModifiedResponse.lastModified) {
+        return {
+          links: this.links,
+          categories: this.categories,
+        }
+      }
+      const { links, categories, lastModified } = await api.getNavigation()
+      this.links = links
+      this.categories = categories
+      this.lastModified = lastModified
+      return { links, categories }
+    },
   },
 
   persist: true
