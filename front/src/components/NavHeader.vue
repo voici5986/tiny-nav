@@ -78,7 +78,7 @@
                     </div>
                     {{ themeStore.isDarkTheme ? '浅色模式' : '深色模式' }}
                 </button>
-                <button v-if="showLogout" @click="$emit('logout')"
+                <button v-if="showLogout" @click="handleLogout"
                     class="flex items-center gap-3 px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700">
                     <div class="i-mdi-logout text-gray-400 dark:text-gray-300">
                     </div>
