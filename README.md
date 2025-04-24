@@ -1,7 +1,13 @@
-# TinyNav · 非常简单的个人导航网站
+# TinyNav · 非常简单的个人导航网站 / A Simple Personal Navigation Website
 
-[![GitHub Stars](https://img.shields.io/github/stars/hanxi/tiny-nav?style=flat-square)](https://github.com/hanxi/tiny-nav/stargazers)
-[![Docker Pulls](https://img.shields.io/docker/pulls/hanxi/tiny-nav?style=flat-square)](https://hub.docker.com/r/hanxi/tiny-nav)
+Language: [中文](#中文版本) | [English](#english-version)
+
+---
+
+## 中文版本
+
+[![GitHub Stars](https://img.shields.io/github/stars/hanxi/tiny-nav?style=flat-square)](https://github.com/hanxi/tiny-nav/stargazers)  
+[![Docker Pulls](https://img.shields.io/docker/pulls/hanxi/tiny-nav?style=flat-square)](https://hub.docker.com/r/hanxi/tiny-nav)  
 [![Docker Image Size](https://img.shields.io/docker/image-size/hanxi/tiny-nav?style=flat-square)](https://hub.docker.com/r/hanxi/tiny-nav)
 
 > ✨ 一款极简、自托管的个人导航网站，基于 Go + Vue 开发。
@@ -110,7 +116,7 @@ docker run -d \
 
 ```bash
 ./tiny-nav --port=58080 --user=admin --password=123456
-````
+```
 
 4. 访问地址：<http://localhost:58080>
 
@@ -140,3 +146,148 @@ ENABLE_NO_AUTH=true LISTEN_PORT=58080 ./tiny-nav
 - [ ] 自动深色模式
 - [ ] 支持书签导入
 - [ ] 支持站内搜索
+
+---
+
+## English Version
+
+[![GitHub Stars](https://img.shields.io/github/stars/hanxi/tiny-nav?style=flat-square)](https://github.com/hanxi/tiny-nav/stargazers)  
+[![Docker Pulls](https://img.shields.io/docker/pulls/hanxi/tiny-nav?style=flat-square)](https://hub.docker.com/r/hanxi/tiny-nav)  
+[![Docker Image Size](https://img.shields.io/docker/image-size/hanxi/tiny-nav?style=flat-square)](https://hub.docker.com/r/hanxi/tiny-nav)
+
+> ✨ A minimalist, self-hosted personal navigation website developed using Go and Vue.
+
+**Online Demo** 👉 [https://nav.hanxi.cc](https://nav.hanxi.cc)
+
+- Username: admin
+- Password: 123456
+
+> [!IMPORTANT]
+> Please do not modify or delete data 🙏
+
+---
+
+## Features
+
+- Drag-and-drop sorting
+- Night mode
+- Compatible with desktop and mobile
+- Retrieve website icons or customize SVG icons
+- No-account mode: edit without needing username and password
+- View-only mode without account: browse without username and password; editing requires login
+
+## 🐳 Quick Deployment Using Docker
+
+### Using Docker Compose
+
+#### International Image
+
+```yaml
+services:
+  tiny-nav:
+    image: hanxi/tiny-nav
+    container_name: tiny-nav
+    restart: unless-stopped
+    ports:
+      - 8080:58080
+    environment:
+      NAV_USERNAME: admin
+      NAV_PASSWORD: 123456
+    volumes:
+      - /tiny-nav-data:/app/data
+```
+
+#### Domestic Image
+
+```yaml
+services:
+  tiny-nav:
+    image: docker.hanxi.cc/hanxi/tiny-nav
+    container_name: tiny-nav
+    restart: unless-stopped
+    ports:
+      - 8080:58080
+    environment:
+      NAV_USERNAME: admin
+      NAV_PASSWORD: 123456
+    volumes:
+      - /tiny-nav-data:/app/data
+```
+
+Start command:
+
+```bash
+docker compose up -d
+```
+
+### Running with Docker
+
+#### International Image
+
+```bash
+docker run -d \
+  --name tiny-nav \
+  -p 8080:58080 \
+  -e NAV_USERNAME=admin \
+  -e NAV_PASSWORD=123456 \
+  -v /tiny-nav-data:/app/data \
+  hanxi/tiny-nav
+```
+
+#### Domestic Image
+
+```bash
+docker run -d \
+  --name tiny-nav \
+  -p 8080:58080 \
+  -e NAV_USERNAME=admin \
+  -e NAV_PASSWORD=123456 \
+  -v /tiny-nav-data:/app/data \
+  docker.hanxi.cc/hanxi/tiny-nav
+```
+
+Access the site by opening your browser and visiting http://<yourIP>:8080
+
+## 🧩 Running Locally (Without Docker)
+
+1. Visit the Releases page to download the executable for your platform.
+2. Start without authentication:
+
+```bash
+./tiny-nav --port=58080 --no-auth
+```
+
+3. Start with account authentication:
+
+```bash
+./tiny-nav --port=58080 --user=admin --password=123456
+```
+
+4. Access: <http://localhost:58080>
+
+## 🔧 Compiling from Source
+
+```bash
+sh build.sh
+```
+
+This will generate the tiny-nav executable file, with all frontend resources bundled within. Example of running:
+
+```bash
+ENABLE_NO_AUTH=true LISTEN_PORT=58080 ./tiny-nav
+```
+
+Access: <http://localhost:58080>
+
+## 🧱 Tech Stack
+
+- Backend: Golang
+- Frontend: Vue 3
+
+## 📌 Development Plan
+
+- [x] Support read-only mode: view without login, edit requires login
+- [x] Pull data only on changes to avoid redundant loading
+- [ ] Automatic dark mode
+- [ ] Support bookmark import
+- [ ] Support in-site search
