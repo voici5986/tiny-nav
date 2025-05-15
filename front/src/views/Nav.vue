@@ -104,7 +104,8 @@ const updatedLink = ref<Link>({
 // 添加获取已存在分类的计算属性
 const existingCategories = computed(() => {
     const categories = new Set<string>()
-    store.links.forEach((link: Link) => {
+    const links = store.links || []
+    links.forEach((link: Link) => {
         if (link.category) {
             categories.add(link.category)
         }
