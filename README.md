@@ -291,3 +291,8 @@ Access: <http://localhost:58080>
 - [ ] Automatic dark mode
 - [ ] Support bookmark import
 - [ ] Support in-site search
+
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=hanxi/tiny-nav&type=Date)](https://star-history.com/#hanxi/tiny-nav&Date)
