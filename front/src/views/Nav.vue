@@ -219,7 +219,8 @@ const closeAddDialog = () => {
     isAddDialogOpen.value = false
 }
 
-const handleAdd = async (link: Link) => {
+const handleAdd = async (payload: { link: Link }) => {
+    const { link } = payload
     try {
         await api.addLink(link)
         await fetchLinks()
@@ -238,9 +239,11 @@ const closeUpdateDialog = () => {
     isUpdateDialogOpen.value = false
 }
 
-const handleUpdate = async (link: Link) => {
+const handleUpdate = async (payload: { link: Link, oldUrl: string }) => {
+    const { link, oldUrl: prevUrl } = payload
     try {
-        await api.updateLink(store.links.findIndex((l: Link) => l.url === link.url), link)
+        const index = store.links.findIndex((l: Link) => l.url === prevUrl)
+        await api.updateLink(index, link)
         await fetchLinks()
         closeUpdateDialog()
     } catch (error) {

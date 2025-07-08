@@ -122,12 +122,12 @@ const props = defineProps<{
     show: boolean
     mode: 'add' | 'update'
     link?: Link
-    categories: string[] // 新增 categories prop
+    categories: string[]
 }>()
 
 const emit = defineEmits<{
     (e: 'update:show', value: boolean): void
-    (e: 'submit', value: Link): void
+    (e: 'submit', value: any): void
 }>()
 
 const query = ref('')
@@ -140,6 +140,25 @@ const formData = ref({
     category: '',
     sortIndex: 0,
 })
+
+const oldUrl = ref<string | undefined>('')
+
+// 当 link 属性改变时更新表单数据
+watch(() => props.link, (newLink) => {
+    if (newLink) {
+        formData.value = { ...newLink }
+        oldUrl.value = newLink.url
+    } else {
+        formData.value = {
+            name: '',
+            url: '',
+            icon: '',
+            category: '',
+            sortIndex: 0,
+        }
+        oldUrl.value = ''
+    }
+}, { immediate: true })
 
 // 处理分类输入
 const handleCategoryInput = (event: Event) => {
@@ -158,20 +177,6 @@ const filteredCategories = computed(() => {
     )
 })
 
-// 当 link 属性改变时更新表单数据
-watch(() => props.link, (newLink) => {
-    if (newLink) {
-        formData.value = { ...newLink }
-    } else {
-        formData.value = {
-            name: '',
-            url: '',
-            icon: '',
-            category: '',
-            sortIndex: 0,
-        }
-    }
-}, { immediate: true })
 
 // 获取图标
 const fetchIcon = async () => {
@@ -193,7 +198,11 @@ const fetchIcon = async () => {
 
 // 提交表单
 const handleSubmit = () => {
-    emit('submit', { ...formData.value })
+    if (props.mode === 'update') {
+        emit('submit', { link: { ...formData.value }, oldUrl: oldUrl.value })
+    } else {
+        emit('submit', { link: { ...formData.value } })
+    }
     emit('update:show', false)
 }
 </script>
