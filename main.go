@@ -469,6 +469,14 @@ func addLinkHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
+	if len(newLink.Url) == 0 {
+		http.Error(w, "Url required", http.StatusBadRequest)
+		return
+	}
+	if len(newLink.Category) == 0 {
+		http.Error(w, "Category required", http.StatusBadRequest)
+		return
+	}
 	nav, err := loadNavigation()
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -493,6 +501,14 @@ func updateLinkHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&updatedLink)
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+	if len(updatedLink.Url) == 0 {
+		http.Error(w, "Url required", http.StatusBadRequest)
+		return
+	}
+	if len(updatedLink.Category) == 0 {
+		http.Error(w, "Category required", http.StatusBadRequest)
 		return
 	}
 	var index int

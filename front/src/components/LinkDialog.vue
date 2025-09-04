@@ -51,7 +51,7 @@
                                 <ComboboxInput
                                     class="w-full border-none px-3 py-2 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 focus:outline-none"
                                     :displayValue="(category: unknown) => category as string"
-                                    @change="handleCategoryInput" />
+                                    @change="handleCategoryInput" required />
                                 <ComboboxButton class="absolute inset-y-0 right-0 flex items-center pr-2">
                                     <div class="i-mdi-chevron-up-down h-5 w-5 text-gray-400 dark:text-gray-300"
                                         aria-hidden="true" />
