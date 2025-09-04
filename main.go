@@ -7,17 +7,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"golang.org/x/net/html"
+	"github.com/mat/besticon/v3/besticon"
 	"gopkg.in/ini.v1"
 	"io"
 	"io/fs"
 	"log"
-	"mime"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 )
@@ -711,166 +708,60 @@ func getIconHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	urlParam := r.URL.Query().Get("url")
-	if urlParam == "" {
+	url := r.URL.Query().Get("url")
+	if url == "" {
 		http.Error(w, "Missing URL parameter", http.StatusBadRequest)
 		return
 	}
 
-	parsedURL, err := url.Parse(urlParam)
+	b := besticon.New(besticon.WithLogger(besticon.NewDefaultLogger(io.Discard)))
+	finder := b.NewIconFinder()
+	icons, err := finder.FetchIcons(url)
 	if err != nil {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		log.Printf("Fetched icon from: %s err:%s", url, err)
+		http.Error(w, "Failed to fetch icons", http.StatusBadRequest)
 		return
 	}
 
-	iconURL := fmt.Sprintf("%s://%s/favicon.ico", parsedURL.Scheme, parsedURL.Host)
-	// Create HTTP client and request
-	tr := &http.Transport{
-		TLSHandshakeTimeout: 10 * time.Second,
-		DisableKeepAlives:   true,
-		ForceAttemptHTTP2:   true,
-	}
-	client := &http.Client{Transport: tr}
-	req, err := http.NewRequest("GET", iconURL, nil)
-	if err != nil {
-		fmt.Println("Error creating request:", err)
+	if len(icons) == 0 {
+		log.Printf("No icons from: %s", url)
+		http.Error(w, "No icons", http.StatusBadRequest)
 		return
 	}
-
-	// Set headers to mimic Chrome
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36")
-	req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
-	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-
-	// Perform the HTTP GET request
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("Error performing GET request:%+v\n", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	finalURL := resp.Request.URL.String() // 获取跳转后的真实 URL
-	log.Printf("Fetched icon from: %s", finalURL)
-
-	contentType := resp.Header.Get("Content-Type")
-	if resp.StatusCode != http.StatusOK || !strings.HasPrefix(contentType, "image/") {
-		// fallback：从 HTML 中获取图标
-		log.Printf("Fallback to HTML icon parsing, code:%d Content-Type:%s", resp.StatusCode, contentType)
-		// 尝试解析 HTML 来获取图标
-		iconURL, err = fetchIconFromHTML(urlParam)
-		if err != nil {
-			log.Printf("Failed to fetch icon: %v", err)
-			http.Error(w, "Failed to fetch icon", http.StatusInternalServerError)
-			return
-		}
-
-		log.Printf("Fetching icon from HTML URL: %s", iconURL)
-		req, _ = http.NewRequest("GET", iconURL, nil)
-		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0...)")
-		req.Header.Set("Accept", "image/*,*/*;q=0.8")
-		resp, err = client.Do(req)
-		if err != nil || resp.StatusCode != http.StatusOK {
-			log.Printf("Failed to fetch icon from HTML: %v", err)
-			http.Error(w, "Failed to fetch icon", http.StatusInternalServerError)
-			return
-		}
-		defer resp.Body.Close()
-		contentType = resp.Header.Get("Content-Type")
-		if contentType == "" {
-			contentType = "image/x-icon"
-		}
-	}
-
-	// 读取图标数据
-	iconData, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Failed to read icon data: %v", err)
-		http.Error(w, "Failed to read icon data", http.StatusInternalServerError)
-		return
-	}
-
-	// 将图标数据转换为base64编码
-	base64Data := base64.StdEncoding.EncodeToString(iconData)
+	best := icons[0]
+	log.Printf("Fetched icon ok %s:  %s", url, best.URL)
 
 	// 返回base64编码的图标数据
-	iconResponse := map[string]string{
-		"iconData": fmt.Sprintf("data:%s;base64,%s", contentType, base64Data),
-	}
+	iconResponse := getIconResponse(best)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(iconResponse)
 }
 
-func fetchIconFromHTML(pageURL string) (string, error) {
-	resp, err := http.Get(pageURL)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to fetch page, status code: %d. pageURL:%s", resp.StatusCode, pageURL)
-	}
-
-	doc, err := html.Parse(resp.Body)
-	if err != nil {
-		return "", err
+func getIconResponse(best besticon.Icon) map[string]string {
+	// 1. 建立格式与 MIME 类型的映射表（覆盖常见图标格式）
+	formatToContentType := map[string]string{
+		"jpg":  "image/jpeg", // jpg 对应标准 MIME 类型 image/jpeg
+		"jpeg": "image/jpeg", // 兼容 jpeg 格式标识
+		"png":  "image/png",
+		"svg":  "image/svg+xml", // svg 需指定为 image/svg+xml
+		"gif":  "image/gif",     // 可选：扩展支持 gif 格式
+		"ico":  "image/x-icon",  // 可选：扩展支持 ico 图标格式
 	}
 
-	var iconURL string
-	var f func(*html.Node)
-	f = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "link" {
-			for _, attr := range n.Attr {
-				if attr.Key == "rel" && (attr.Val == "icon" || attr.Val == "shortcut icon") {
-					for _, attr := range n.Attr {
-						if attr.Key == "href" {
-							iconURL = attr.Val
-							log.Printf("Icon URL found: %s", iconURL)
-							if !strings.HasPrefix(iconURL, "http") && !strings.HasPrefix(iconURL, "//") {
-								baseURL, _ := url.Parse(pageURL)
-								iconURL = baseURL.ResolveReference(&url.URL{Path: iconURL}).String()
-							}
-							if strings.HasPrefix(iconURL, "//") {
-								baseURL, _ := url.Parse(pageURL)
-								iconURL = baseURL.Scheme + ":" + iconURL
-							}
-							return
-						}
-					}
-				}
-			}
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			f(c)
-		}
-	}
-	f(doc)
-
-	if iconURL == "" {
-		return "", fmt.Errorf("icon not found in HTML")
+	// 2. 根据 best.Format 查找对应的 contentType，处理未知格式
+	contentType, ok := formatToContentType[best.Format]
+	if !ok {
+		// 未知格式时，默认使用二进制流类型（或根据业务需求调整，如报错）
+		log.Printf("Unknow image type %s", best.Format)
+		contentType = "application/octet-stream"
 	}
 
-	return iconURL, nil
-}
-
-func getFileExtension(iconURL string, resp *http.Response) string {
-	ext := filepath.Ext(iconURL)
-	if ext == "" {
-		// 尝试从 Content-Type 获取文件扩展名
-		contentType := resp.Header.Get("Content-Type")
-		if contentType != "" {
-			exts, _ := mime.ExtensionsByType(contentType)
-			if len(exts) > 0 {
-				ext = exts[0]
-			}
-		}
+	base64Data := base64.StdEncoding.EncodeToString(best.ImageData)
+	iconResponse := map[string]string{
+		"iconData": fmt.Sprintf("data:%s;base64,%s", contentType, base64Data),
 	}
-	if ext == "" {
-		// 默认扩展名
-		ext = ".ico"
-	}
-	return ext
+	return iconResponse
 }
 
 // CORS 中间件
