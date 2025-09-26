@@ -143,7 +143,7 @@ ENABLE_NO_AUTH=true LISTEN_PORT=58080 ./tiny-nav
 
 - [x] 支持只读模式：查看免登录，编辑需登录
 - [x] 数据有变化才拉取，避免重复加载
-- [ ] 自动深色模式
+- [x] 自动深色模式
 - [ ] 支持书签导入
 - [ ] 支持站内搜索
 
@@ -288,10 +288,9 @@ Access: <http://localhost:58080>
 
 - [x] Support read-only mode: view without login, edit requires login
 - [x] Pull data only on changes to avoid redundant loading
-- [ ] Automatic dark mode
+- [x] Automatic dark mode
 - [ ] Support bookmark import
 - [ ] Support in-site search
-
 
 ## Star History
 

@@ -9,11 +9,12 @@
                         class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600">
                         <div class="i-mdi-arrow-left"></div>
                     </button>
+
+                    <!-- ✅ 改好的主题切换按钮 -->
                     <button @click="themeStore.toggleTheme"
-                        class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600">
-                        <div
-                            :class="themeStore.isDarkTheme ? 'i-mdi-white-balance-sunny' : 'i-mdi-moon-waxing-crescent'">
-                        </div>
+                        class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600"
+                        :title="themeTitle">
+                        <div :class="themeIcon"></div>
                     </button>
                 </div>
             </div>
@@ -35,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMainStore } from '@/stores'
 import { useThemeStore } from '@/stores/themeStore'
@@ -51,7 +52,7 @@ const loading = ref(false)
 
 const form = reactive({
     username: '',
-    password: ''
+    password: '',
 })
 
 const goBack = () => {
@@ -60,7 +61,6 @@ const goBack = () => {
 
 const handleLogin = async () => {
     if (loading.value) return
-
     loading.value = true
     try {
         const token = await api.login(form)
@@ -74,4 +74,16 @@ const handleLogin = async () => {
     }
 }
 
+/* ====== 新增：主题模式按钮显示逻辑 ====== */
+const themeIcon = computed(() => {
+    if (themeStore.mode === 'system') return 'i-mdi-monitor text-blue-400'
+    return themeStore.isDarkTheme
+        ? 'i-mdi-moon-waxing-crescent text-gray-300'
+        : 'i-mdi-white-balance-sunny text-yellow-500'
+})
+
+const themeTitle = computed(() => {
+    if (themeStore.mode === 'system') return '跟随系统'
+    return themeStore.isDarkTheme ? '深色模式' : '浅色模式'
+})
 </script>
