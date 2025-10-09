@@ -5,6 +5,31 @@
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>私人导航</title>
+
+    <!-- 🚀 主题初始化脚本：避免白屏闪烁 -->
+    <script>
+      (function () {
+        try {
+          // 从 localStorage 拿 Pinia 持久化的 theme store
+          const store = localStorage.getItem('theme')
+          let mode = 'system'
+          if (store) {
+            mode = JSON.parse(store).mode || 'system'
+          }
+
+          const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isDark = mode === 'dark' || (mode === 'system' && systemDark)
+
+          if (isDark) {
+            document.documentElement.classList.add('dark')
+          } else {
+            document.documentElement.classList.remove('dark')
+          }
+        } catch (e) {
+          console.error('theme init error', e)
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>
